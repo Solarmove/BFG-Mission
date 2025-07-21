@@ -1,0 +1,11 @@
+[Unit]
+Description=Bot
+After=network.target
+
+[Service]
+WorkingDirectory=bot_path/
+ExecStart=bot_path/.venv/bin/python3 -m bot
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+**/__pycache__
+**/.env
+**/.git
+**/venv
+**/.venv
+*.log
+*.md
+Dockerfile
+prometheus-data/
+grafana-data/

@@ -1,0 +1,57 @@
+services:
+  bot:
+    build: .
+    container_name: bot
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1  # Для мгновенного вывода логов
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - bot-network
+    restart: on-failure
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${DB_CONFIG__USER}
+      POSTGRES_PASSWORD: ${DB_CONFIG__PASSWORD}
+      POSTGRES_DB: ${DB_CONFIG__DATABASE}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_CONFIG__USER} -d ${DB_CONFIG__DATABASE}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${DB_CONFIG__PORT}:5432"
+    networks:
+      - bot-network
+    restart: on-failure
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel notice
+    privileged: true
+    volumes:
+      - redis-data:/data
+    networks:
+      - bot-network
+    restart: on-failure
+
+volumes:
+  postgres-data:
+  redis-data:
+
+
+networks:
+  bot-network:
+    driver: bridge
