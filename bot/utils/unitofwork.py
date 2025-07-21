@@ -14,8 +14,6 @@ from bot.db.repositories.repo import (
 
 
 class IUnitOfWork(ABC):
-
-
     @abstractmethod
     def __init__(self): ...
 
@@ -35,21 +33,15 @@ class IUnitOfWork(ABC):
 class UnitOfWork(IUnitOfWork):
     session_factory: async_sessionmaker[AsyncSession] = None
 
-    def __call__(self, *args, **kwargs):
-        ...
-
     def __init__(self):
         if not self.session_factory:
             self.session_factory = async_session_maker
 
     async def __aenter__(self):
         self.session = self.session_factory()
-        self.transaction = await self.session.begin()
         return self
 
     async def __aexit__(self, exc_type, *args):
-        if exc_type:
-            await self.transaction.rollback()
         await self.session.close()
 
     async def commit(self):

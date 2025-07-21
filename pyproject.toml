@@ -1,17 +1,23 @@
 [project]
-name = "aiogram-bot-template"
+name = "BFG_Mission"
 version = "0.1.0"
-description = "Add your description here"
+description = "Botanic Flower Group"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aiogram>=3.20.0.post0",
-    "aiogram-dialog>=2.3.1",
+    "aiogram>=3.21.0",
+    "aiogram-dialog>=2.4.0",
     "aiogram-i18n>=1.4",
+    "alembic>=1.16.4",
     "arq>=0.26.3",
     "asyncpg>=0.30.0",
-    "pydantic>=2.11.4",
-    "pydantic-settings>=2.9.1",
-    "ruff>=0.11.8",
-    "sqlalchemy>=2.0.40",
+    "fluent-runtime>=0.4.0",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "sqlalchemy>=2.0.41",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.4",
 ]

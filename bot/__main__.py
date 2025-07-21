@@ -13,9 +13,10 @@ from bot.dialogs import dialog_routers
 from bot.db.base import create_all
 from bot.db.redis import redis
 from bot.handlers import routers_list
+from bot.i18n.utils.i18n_format import make_i18n_middleware
 from bot.middleware.db import DbSessionMiddleware
 from bot.middleware.i18n_dialog import RedisI18nMiddleware
-from bot.utils.i18n_utils.i18n_format import make_i18n_middleware
+
 from bot.utils.set_bot_commands import set_default_commands
 from configreader import config
 
@@ -44,29 +45,30 @@ dp = Dispatcher(storage=storage, events_isolation=event_isolation)
 router = Router(name=__name__)
 
 # I18n Settings
-path_to_locales = os.path.join("bot", 'src', "locales", "{locale}", "LC_MESSAGES")
-core = FluentRuntimeCore(path=path_to_locales)
-i18n_middleware = RedisI18nMiddleware(
-    core=core,
-    redis=redis,
-)
-i18n_dialog_middleware = make_i18n_middleware(path_to_locales)
+core = FluentRuntimeCore(path=config.path_to_locales)
+i18n_middleware = RedisI18nMiddleware(core=core, redis=redis)
+i18n_dialog_middleware = make_i18n_middleware(config.path_to_locales)
+
+
+def include_middlewares():
+    dp.update.middleware(i18n_middleware)
+    dp.update.middleware(i18n_dialog_middleware)
+    dp.update.middleware(RedisI18nMiddleware(core=core, redis=redis))
+    dp.update.middleware(DbSessionMiddleware())
 
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
     await set_default_commands(bot)
-    dp.update.middleware(DbSessionMiddleware())
+    include_middlewares()
+    await core.startup()
     router.include_routers(*routers_list)
     router.include_routers(*dialog_routers)
-    bg_manager = setup_dialogs(dp)
+    setup_dialogs(dp)
     dp.include_router(router)
-    await create_all()
-    await dp.start_polling(
-        bot, allowed_updates=[
-            "message", "callback_query", "chat_member", "chat_member_updated",
-            'my_chat_member', 'chat_join_request']
-    )
+    dp["redis"] = redis
+    # await create_all()
+    await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
 
 if __name__ == "__main__":

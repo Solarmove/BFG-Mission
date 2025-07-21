@@ -7,12 +7,12 @@ from bot.middleware.throttling import ThrottlingMiddleware
 from bot.utils.unitofwork import UnitOfWork
 
 router = Router()
-router.message.middleware(ThrottlingMiddleware(start=2.5))
+router.message.middleware(ThrottlingMiddleware(help=2.5))
 
 
 @router.message(CommandStart())
-@flags.throttling_key("start")
-async def start_handler(
+@flags.throttling_key("help")
+async def help_handler(
     message: Message, uow: UnitOfWork, dialog_manager: DialogManager
 ):
     ...

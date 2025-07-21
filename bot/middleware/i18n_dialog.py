@@ -62,7 +62,7 @@ class RedisI18nMiddleware(I18nMiddleware):
         context_key: str = "i18n",
         locale_key: Optional[str] = None,
         middleware_key: str = "i18n_middleware",
-        default_locale: str = "ru",
+        default_locale: str = "uk",
         key_separator: str = "-",
     ) -> None:
         super().__init__(

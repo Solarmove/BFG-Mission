@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
 
 from arq.connections import RedisSettings
-from pydantic import PostgresDsn, ConfigDict
-from pydantic_settings import BaseSettings
+from pydantic import PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_PATH = Path(__file__)
 
 
 class BotConfig(BaseSettings):
@@ -16,15 +19,11 @@ class BotConfig(BaseSettings):
 class DBConfig(BaseSettings):
     """Database configuration"""
 
-    host: str
-    port: int
-    user: str
-    password: str
-    database: str
     postgres_dsn: PostgresDsn
     redis_host: str
     redis_port: int
     redis_db: int
+    redis_password: str
 
 
 class Config(BaseSettings):
@@ -34,8 +33,11 @@ class Config(BaseSettings):
     db_config: DBConfig
     admins: list[int]
     i18n_format_key: str
+    path_to_locales: Path = (
+        BASE_PATH / "bot" / "i18n" / "locales" / "{locale}" / "LC_MESSAGES"
+    )
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
@@ -50,4 +52,5 @@ class RedisConfig:
         host=config.db_config.redis_host,
         port=config.db_config.redis_port,
         database=config.db_config.redis_db,
+        password=config.db_config.redis_password,
     )
