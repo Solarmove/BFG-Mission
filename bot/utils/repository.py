@@ -29,9 +29,8 @@ class SQLAlchemyRepository(AbstractRepository):
         self.session = session
 
     async def add_one(self, data: dict) -> int:
-        stmt = insert(self.model).values(**data).returning(self.model.id)
+        stmt = insert(self.model).values(**data)
         res = await self.session.execute(stmt)
-        return res.scalar_one()
 
     async def edit_one(self, id: int, data: dict):
         stmt = (
@@ -51,3 +50,10 @@ class SQLAlchemyRepository(AbstractRepository):
         res = await self.session.execute(stmt)
         res = res.scalars().first()
         return res
+
+    async def get_or_create(self, **kwargs):
+        instance = await self.find_one(**kwargs)
+        if instance:
+            return instance
+        data = {k: v for k, v in kwargs.items() if v is not None}
+        await self.add_one(data)

@@ -41,7 +41,7 @@ async def update_locale(locale: str, user_id: int, manager: DialogManager) -> No
     manager.middleware_data[config.i18n_format_key] = l10n.format_value
 
 
-class I18NFormat(Text):
+class I18nFormat(Text):
     def __init__(self, text: str, when: WhenCondition = None):
         super().__init__(when)
         self.text = text

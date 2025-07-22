@@ -1,0 +1,44 @@
+from aiogram_dialog import Window  # noqa: F401
+from aiogram_dialog.widgets.input import MessageInput, TextInput  # noqa: F401
+from aiogram_dialog.widgets.kbd import Back, Cancel  # noqa: F401
+from aiogram_dialog.widgets.text import Const, Format, Case  # noqa: F401
+
+from bot.utils.i18n_utils.i18n_format import I18nFormat  # noqa: F401
+
+from ...i18n.utils.i18n_format import I18nFormat
+from ...utils.dialog_utils import BackBtn
+from . import getters, keyboards, on_clicks, states  # noqa: F401
+
+enter_full_name_window = Window(
+    I18nFormat("enter-full-name-text"),
+    TextInput(
+        id=states.Registration.enter_full_name,
+        on_success=on_clicks.on_enter_full_name_click,
+    ),
+    state=states.Registration.enter_full_name,
+)
+
+
+select_position_window = Window(
+    I18nFormat("select-position-text"),
+    keyboards.select_position_keyboard(),
+    BackBtn(),
+    state=states.Registration.select_position,
+    getter=getters.positions_getter,
+)
+
+
+main_menu_window = Window(
+    Case(
+        {
+            1: I18nFormat("main-menu-1-level-text"),
+            2: I18nFormat("main-menu-2-level-text"),
+            3: I18nFormat("main-menu-3-level-text"),
+            4: I18nFormat("main-menu-4-level-text"),
+        },
+        selector="hierarchy_level",
+    ),
+    keyboards.main_menu_keyboard(),
+    state=states.MainMenu.select_action,
+    getter=getters.main_menu_getter
+)
