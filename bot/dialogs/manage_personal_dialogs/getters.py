@@ -36,3 +36,15 @@ async def positions_getter(dialog_manager: DialogManager, uow: UnitOfWork, **kwa
             ("Флорист",),
         ]
     }
+
+
+async def get_reg_link(dialog_manager: DialogManager, uow: UnitOfWork, **kwargs):
+    reg_link = dialog_manager.dialog_data.get("reg_link", "")
+    text = (
+        "Вас було запрошено зареєструватися в боті.\n\n"
+        "Для цього перейдіть за посиланням нижче:"
+    )
+    return {
+        "share_reg_link": f"https://t.me/share/url?url={reg_link}&text={text}",
+        "reg_link": dialog_manager.dialog_data.get("reg_link", ""),
+    }

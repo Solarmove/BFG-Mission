@@ -5,6 +5,7 @@ from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager  # noqa: F401
 
+from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ...utils.unitofwork import UnitOfWork
 
 
@@ -47,3 +48,11 @@ async def on_select_position_click(
     await uow.commit()
 
     await manager.next()
+
+
+async def manage_personal_click(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    await manager.start(ManagePersonalMenu.select_action)

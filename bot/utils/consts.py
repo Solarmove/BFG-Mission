@@ -15,7 +15,7 @@ POSITION_TITLES: TypeAlias = Literal[
     "Флорист",
 ]
 
-_positions_map: dict[POSITION_TITLES, int] = {
+positions_map: dict[POSITION_TITLES, int] = {
     "Директор": 1,
     "CEO": 2,
     "Асистент СЕО": 2,
