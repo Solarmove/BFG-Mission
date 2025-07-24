@@ -9,6 +9,7 @@ from aiogram_dialog.widgets.text import Format
 from magic_filter import F
 
 from . import on_clicks, states  # noqa: F401
+from ..ai_agent_menu_dialogs.states import AIAgentMenu
 from ..categories_menu_dialogs.states import CategoryMenu
 from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ...i18n.utils.i18n_format import I18nFormat
@@ -32,11 +33,11 @@ def select_position_keyboard():
 
 def main_menu_keyboard():
     return Group(
-        # Start(
-        #     I18nFormat("create-new-task-btn"),
-        #     id="create_new_task",
-        #     # state=CreateTask.select_task_type,
-        # ),
+        Start(
+            I18nFormat("ai-agent-btn"),
+            id="ai_agent",
+            state=AIAgentMenu.send_query,
+        ),
         Button(
             I18nFormat("my-tasks-btn"),
             id="my_tasks",
