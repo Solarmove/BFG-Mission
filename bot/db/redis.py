@@ -9,7 +9,7 @@ redis = Redis(
     host=config.db_config.redis_host,
     port=config.db_config.redis_port,
     db=config.db_config.redis_db,
-    password=config.db_config.redis_password,
+    # password=config.db_config.redis_password,
 )
 
 
@@ -62,12 +62,13 @@ def redis_cache(expiration=3600):
 
     return decorator
 
+
 async def get_user_locale(user_id: int):
     user_locale = await redis.get(f"user:{user_id}:locale")
     if user_locale:
         return user_locale.decode()
     return None
 
+
 async def set_user_locale(user_id: int, locale: str):
     await redis.set(f"user:{user_id}:locale", locale)
-

@@ -24,7 +24,7 @@ class User(Base):
         nullable=False,
     )
     full_name = mapped_column(VARCHAR(255), nullable=True, unique=True)
-    hierarchy_level = mapped_column(ENUM(Role), nullable=False)
+    hierarchy_level = mapped_column(INTEGER, nullable=False)
     position_title = mapped_column(
         VARCHAR(255),
         nullable=True,
@@ -42,10 +42,12 @@ class User(Base):
     created_tasks: Mapped[list["Task"]] = Relationship(
         back_populates="creator",
         cascade="all, delete-orphan",
+        foreign_keys="[Task.creator_id]",
     )
     executed_tasks: Mapped[list["Task"]] = Relationship(
         back_populates="executor",
         cascade="all, delete-orphan",
+        foreign_keys="[Task.executor_id]",
     )
 
     reports: Mapped[list["TaskReport"]] = Relationship(
@@ -139,6 +141,13 @@ class Task(Base):
     category: Mapped["TaskCategory"] = Relationship(
         back_populates="tasks",
     )
+    control_points: Mapped[list["TaskControlPoints"]] = Relationship(
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
+    report: Mapped["TaskReport"] = Relationship(
+        back_populates="task",
+    )
 
 
 class TaskControlPoints(Base):
@@ -159,9 +168,8 @@ class TaskControlPoints(Base):
     description: Mapped[str] = mapped_column(TEXT, nullable=False)
 
     task: Mapped["Task"] = Relationship(back_populates="control_points")
-    reports: Mapped[list["TaskReport"]] = Relationship(
-        back_populates="task",
-        cascade="all, delete-orphan",
+    report: Mapped["TaskReport"] = Relationship(
+        back_populates="task_control_point",
     )
 
 
@@ -186,17 +194,23 @@ class TaskReport(Base):
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=False,
     )
-    is_control_point_report: Mapped[bool] = mapped_column(BOOLEAN, default=False)
+    task_control_point_id: Mapped[int] = mapped_column(
+        INTEGER,
+        ForeignKey("task_control_points.id", ondelete="CASCADE"),
+    )
     report_text: Mapped[str] = mapped_column(TEXT, nullable=False)
     created_at: Mapped[str] = mapped_column(
         TIMESTAMP,
         server_default=func.now(),
     )
 
-    task: Mapped["Task"] = Relationship(back_populates="reports")
+    task: Mapped["Task"] = Relationship(back_populates="report")
     content: Mapped[list["TaskReportContent"]] = Relationship(
         back_populates="report",
         cascade="all, delete-orphan",
+    )
+    task_control_point: Mapped["TaskControlPoints"] = Relationship(
+        back_populates="report",
     )
 
 
@@ -215,7 +229,6 @@ class TaskReportContent(Base):
     )
     report: Mapped["TaskReport"] = Relationship(
         back_populates="content",
-        cascade="all, delete-orphan",
     )
     file_id: Mapped[str] = mapped_column(VARCHAR(255), nullable=False)
     file_unique_id: Mapped[str] = mapped_column(

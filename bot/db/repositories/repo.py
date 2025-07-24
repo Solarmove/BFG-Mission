@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from bot.db.models.models import (
     TaskReportContent,
@@ -12,11 +13,17 @@ from bot.db.models.models import (
     TaskReport,
 )
 from bot.db.redis import redis_cache
+from bot.utils.enum import Role
 from bot.utils.repository import SQLAlchemyRepository
 
 
 class UserRepo(SQLAlchemyRepository):
     model = User
+
+    async def get_all_users_with_schedule(self):
+        stmt = select(self.model).options(selectinload(self.model.work_schedules))
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def get_all_personal(self) -> Sequence[User]:
         """Get all users with hierarchy level >= 2, ordered by full name."""
@@ -43,6 +50,11 @@ class UserRepo(SQLAlchemyRepository):
         hierarchy_level = res.scalar_one_or_none()
         return hierarchy_level if hierarchy_level is not None else None
 
+    async def get_user_from_hierarchy(self, level: Role):
+        stmt = select(self.model).where(self.model.hierarchy_level <= level)
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
 
 class WorkScheduleRepo(SQLAlchemyRepository):
     model = WorkSchedule
@@ -66,4 +78,3 @@ class TaskReportRepo(SQLAlchemyRepository):
 
 class TaskReportContentRepo(SQLAlchemyRepository):
     model = TaskReportContent
-    

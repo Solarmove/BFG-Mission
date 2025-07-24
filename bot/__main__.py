@@ -67,7 +67,7 @@ async def main():
     setup_dialogs(dp)
     dp.include_router(router)
     dp["redis"] = redis
-    # await create_all()
+    await create_all()
     await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
 

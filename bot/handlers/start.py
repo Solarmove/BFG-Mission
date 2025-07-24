@@ -80,4 +80,3 @@ async def user_start_handler(
     """
 
     await dialog_manager.start(MainMenu.select_action, mode=StartMode.RESET_STACK)
-    

@@ -26,7 +26,6 @@ async def startup(ctx):
     )
 
 
-
 async def shutdown(ctx):
     bot: Bot = ctx["bot"]
     await bot.session.close()

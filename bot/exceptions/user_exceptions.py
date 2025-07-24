@@ -13,3 +13,7 @@ class UserWithFullNameAlreadyExists(UserBaseException):
 
     def __init__(self, full_name: str):
         super.__init__(f"User with full name '{full_name}' already exists.")
+
+
+class InvalidCSVFile(UserBaseException):
+    """Exception raised when a CSV file is invalid."""

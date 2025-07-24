@@ -3,8 +3,6 @@ from aiogram_dialog.widgets.input import MessageInput, TextInput  # noqa: F401
 from aiogram_dialog.widgets.kbd import Back, Cancel  # noqa: F401
 from aiogram_dialog.widgets.text import Const, Format, Case  # noqa: F401
 
-from bot.utils.i18n_utils.i18n_format import I18nFormat  # noqa: F401
-
 from ...i18n.utils.i18n_format import I18nFormat
 from ...utils.dialog_utils import BackBtn
 from . import getters, keyboards, on_clicks, states  # noqa: F401
@@ -12,7 +10,7 @@ from . import getters, keyboards, on_clicks, states  # noqa: F401
 enter_full_name_window = Window(
     I18nFormat("enter-full-name-text"),
     TextInput(
-        id=states.Registration.enter_full_name,
+        id="full_name",
         on_success=on_clicks.on_enter_full_name_click,
     ),
     state=states.Registration.enter_full_name,
@@ -40,5 +38,5 @@ main_menu_window = Window(
     ),
     keyboards.main_menu_keyboard(),
     state=states.MainMenu.select_action,
-    getter=getters.main_menu_getter
+    getter=getters.main_menu_getter,
 )

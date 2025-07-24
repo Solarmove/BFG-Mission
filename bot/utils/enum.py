@@ -14,4 +14,3 @@ class TaskStatus(StrEnum):
     COMPLETED = "COMPLETED"
     CANCELED = "CANCELED"
     OVERDUE = "OVERDUE"
-    

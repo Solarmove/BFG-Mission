@@ -18,7 +18,6 @@ class CreateRegLink(StatesGroup):
     show_link = State()  # State for showing the generated link
 
 
-
 class ManageWorkSchedule(StatesGroup):
     """
     State group for managing work schedule.
@@ -27,19 +26,22 @@ class ManageWorkSchedule(StatesGroup):
     select_action = State()  # Main menu state for work schedule management
 
 
-
-class ChangeWorkScheduleMany(StatesGroup):
+class ChangeWorkSchedule(StatesGroup):
     """
     State group for changing work schedule in bulk.
     """
+    select_month = State()
+    select_year = State()
+    send_excel_file = State()  # State for sending Excel file
+    done = State()
+    error = State()
 
 
-class ChangeWorkScheduleOne(StatesGroup):
+
+class ShowSchedule(StatesGroup):
     """
-    State group for changing work schedule for one user.
+    State group for showing work schedule.
     """
-
-    select_user = State()  # State for selecting a user
-    select_date = State()  # State for selecting a date
-    select_time = State()  # State for selecting time
-    confirm_change = State()  # State for confirming the change
+    select_month = State()
+    select_year = State()
+    show_schedule = State()

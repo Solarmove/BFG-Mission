@@ -37,5 +37,3 @@ class YouCantCreateTask(TaskBaseException):
 
     def __init__(self, user_id: int):
         super().__init__(f"User with ID {user_id} is not allowed to create tasks.")
-
-

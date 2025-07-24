@@ -22,6 +22,7 @@ async def get_user_locale_func(user_id: int, default_locale: str) -> str:
         lang = user_locale
     return lang
 
+
 class I18nDialogMiddleware(BaseMiddleware):
     def __init__(
         self,
@@ -42,7 +43,7 @@ class I18nDialogMiddleware(BaseMiddleware):
         event: Union[Message, CallbackQuery],
         data: Dict[str, Any],
     ) -> Any:
-        user_id: int = data['event_from_user'].id
+        user_id: int = data["event_from_user"].id
         # some language/locale retrieving logic
         locale = await get_user_locale_func(user_id, self.default_locale)
 

@@ -26,6 +26,7 @@ async def on_enter_full_name_click(
         )
         await uow.commit()
         return
+    manager.dialog_data["full_name"] = full_name
     await manager.next()
 
 
@@ -41,13 +42,19 @@ async def on_select_position_click(
     uow: UnitOfWork = manager.middleware_data["uow"]
     hierarchy_level = manager.start_data.get("hierarchy_level")
     position_title = item_id
-    await uow.users.edit_one(
-        id=call.from_user.id,
-        data=dict(position_title=position_title, hierarchy_level=hierarchy_level),
+    await uow.users.add_one(
+        data=dict(
+            id=call.from_user.id,
+            full_name=manager.dialog_data.get("full_name"),
+            full_name_tg=call.from_user.full_name,
+            username=call.from_user.username,
+            position_title=position_title,
+            hierarchy_level=hierarchy_level,
+        ),
     )
     await uow.commit()
 
-    await manager.next()
+    await manager.start(states.MainMenu.select_action)
 
 
 async def manage_personal_click(
