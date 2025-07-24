@@ -1,3 +1,4 @@
+import datetime
 import json
 from functools import wraps
 
@@ -72,3 +73,31 @@ async def get_user_locale(user_id: int):
 
 async def set_user_locale(user_id: int, locale: str):
     await redis.set(f"user:{user_id}:locale", locale)
+
+
+async def save_ai_agent_memory(redis: Redis, key: str, data: list[dict | str]):
+    """
+    Save AI agent memory to Redis.
+    :param redis: Redis instance.
+    :param key: Unique key for the memory.
+    :param data: List of messages or data to save.
+    """
+    value_json = json.dumps(data)
+    await redis.set(key, value_json, ex=datetime.timedelta(days=1))
+
+
+async def get_ai_agent_memory(redis: Redis, key: str) -> list[dict | str]:
+    """
+    Retrieve AI agent memory from Redis.
+    :param redis: Redis instance.
+    :param key: Unique key for the memory.
+    :return: List of messages or data.
+    """
+    cached_data = await redis.get(key)
+    if cached_data:
+        value_json = cached_data.decode("utf-8")
+        try:
+            return json.loads(value_json)
+        except json.JSONDecodeError:
+            return []
+    return []

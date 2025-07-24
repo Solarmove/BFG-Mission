@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import ENUM, TIME, TIMESTAMP, DATE
 from sqlalchemy.orm import Mapped, mapped_column, Relationship
 
 from bot.db.base import Base
-from bot.utils.enum import Role, TaskStatus
+from bot.utils.enum import TaskStatus
 
 
 class User(Base):
@@ -129,7 +129,7 @@ class Task(Base):
     photo_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
     video_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
     file_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
-    status = mapped_column(ENUM(TaskStatus), nullable=False)
+    status = mapped_column(ENUM(TaskStatus), nullable=False, default=TaskStatus.NEW)
     created_at: Mapped[str] = mapped_column(
         TIMESTAMP,
         server_default=func.now(),

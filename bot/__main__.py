@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
@@ -8,6 +7,7 @@ from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisEventIsolation, RedisStorage
 from aiogram_dialog import setup_dialogs
 from aiogram_i18n.cores import FluentRuntimeCore
+from arq import create_pool
 
 from bot.dialogs import dialog_routers
 from bot.db.base import create_all
@@ -18,7 +18,7 @@ from bot.middleware.db import DbSessionMiddleware
 from bot.middleware.i18n_dialog import RedisI18nMiddleware
 
 from bot.utils.set_bot_commands import set_default_commands
-from configreader import config
+from configreader import config, RedisConfig
 
 # Logging
 logging.basicConfig(
@@ -58,6 +58,8 @@ def include_middlewares():
 
 
 async def main():
+    redis_pool = await create_pool(RedisConfig.pool_settings)
+
     await bot.delete_webhook(drop_pending_updates=True)
     await set_default_commands(bot)
     include_middlewares()
@@ -67,6 +69,7 @@ async def main():
     setup_dialogs(dp)
     dp.include_router(router)
     dp["redis"] = redis
+    dp["arq"] = redis_pool
     await create_all()
     await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 

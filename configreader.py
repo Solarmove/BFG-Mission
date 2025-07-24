@@ -56,5 +56,5 @@ class RedisConfig:
         host=config.db_config.redis_host,
         port=config.db_config.redis_port,
         database=config.db_config.redis_db,
-        password=config.db_config.redis_password,
+        # password=config.db_config.redis_password,
     )

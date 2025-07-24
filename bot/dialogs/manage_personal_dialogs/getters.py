@@ -126,7 +126,6 @@ async def load_schedule_data_getter(
 async def work_schedule_getter(
     dialog_manager: DialogManager, uow: UnitOfWork, event_from_user: User, **kwargs
 ):
-    user_id = event_from_user.id
     month = dialog_manager.dialog_data["month"]
     year = dialog_manager.dialog_data["year"]
     users = await uow.users.get_all_users_with_schedule()

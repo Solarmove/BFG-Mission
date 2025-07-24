@@ -5,7 +5,6 @@ from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager, StartMode  # noqa: F401
 
-from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ...utils.unitofwork import UnitOfWork
 
 

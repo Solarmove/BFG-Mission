@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, Protocol
 
 from aiogram_dialog.api.protocols import DialogManager

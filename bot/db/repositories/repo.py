@@ -2,7 +2,7 @@ import datetime
 from typing import Sequence
 
 from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from bot.db.models.models import (
     TaskReportContent,
@@ -20,6 +20,21 @@ from bot.utils.repository import SQLAlchemyRepository
 
 class UserRepo(SQLAlchemyRepository):
     model = User
+
+    async def get_user_with_all_data(self, user_id: int):
+        """Get a user with all related data."""
+        stmt = (
+            select(self.model)
+            .where(self.model.id == user_id)
+            .options(
+                selectinload(self.model.work_schedules),
+                selectinload(self.model.created_tasks),
+                selectinload(self.model.executed_tasks),
+                # selectinload(self.model.reports),
+            )
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
 
     async def get_all_users_with_schedule(self):
         stmt = select(self.model).options(selectinload(self.model.work_schedules))
@@ -68,6 +83,18 @@ class UserRepo(SQLAlchemyRepository):
 class WorkScheduleRepo(SQLAlchemyRepository):
     model = WorkSchedule
 
+    async def get_all_work_schedules_for_date_to_date(
+        self, date_from: datetime.date, date_to: datetime.date
+    ):
+        """Get all work schedules for a given date range."""
+        stmt = (
+            select(self.model)
+            .where(self.model.date >= date_from, self.model.date <= date_to)
+            .order_by(self.model.date)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
     async def get_count_of_users_on_shift(self):
         datetime_now = datetime.datetime.now()
         stmt = (
@@ -89,6 +116,40 @@ class TaskCategoryRepo(SQLAlchemyRepository):
 
 class TaskRepo(SQLAlchemyRepository):
     model = Task
+
+    async def get_all_tasks(
+        self,
+        creator_id: int | None = None,
+        executor_id: int | None = None,
+        category_id: int | None = None,
+        status: str | None = None,
+        start_datetime: datetime.datetime | None = None,
+        end_datetime: datetime.datetime | None = None,
+    ):
+        """Get all tasks with optional filters."""
+        stmt = select(self.model).options(
+            joinedload(self.model.creator),
+            joinedload(self.model.executor),
+            joinedload(self.model.category),
+            selectinload(self.model.control_points),
+            joinedload(self.model.report),
+        )
+        if creator_id is not None:
+            stmt = stmt.where(self.model.creator_id == creator_id)
+
+        if executor_id is not None:
+            stmt = stmt.where(self.model.executor_id == executor_id)
+        if category_id is not None:
+            stmt = stmt.where(self.model.category_id == category_id)
+        if status is not None:
+            stmt = stmt.where(self.model.status == status)
+        if start_datetime is not None:
+            stmt = stmt.where(self.model.start_datetime >= start_datetime)
+        if end_datetime is not None:
+            stmt = stmt.where(self.model.end_datetime <= end_datetime)
+
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def get_my_current_task(self, user_id: int):
         """Get the current task for a user."""

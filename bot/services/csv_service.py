@@ -80,8 +80,6 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
     excel_dir.mkdir(exist_ok=True)
 
     # Generate a unique filename based on month, year and timestamp
-    month_name = calendar.month_name[month]
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"work_schedule_{month}_{year}.csv"
     file_path = excel_dir / filename
 
