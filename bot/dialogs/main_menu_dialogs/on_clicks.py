@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery, Message
 from . import states, getters, on_clicks  # noqa: F401
 from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
-from aiogram_dialog import DialogManager  # noqa: F401
+from aiogram_dialog import DialogManager, StartMode  # noqa: F401
 
 from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ...utils.unitofwork import UnitOfWork
@@ -25,6 +25,7 @@ async def on_enter_full_name_click(
             id=message.from_user.id, data=dict(full_name=full_name)
         )
         await uow.commit()
+        await manager.start(states.MainMenu.select_action, mode=StartMode.RESET_STACK)
         return
     manager.dialog_data["full_name"] = full_name
     await manager.next()
@@ -56,10 +57,3 @@ async def on_select_position_click(
 
     await manager.start(states.MainMenu.select_action)
 
-
-async def manage_personal_click(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    await manager.start(ManagePersonalMenu.select_action)

@@ -1,3 +1,4 @@
+import datetime
 from typing import Sequence
 import calendar
 import locale
@@ -72,13 +73,25 @@ async def month_getter(
         "Листопад",
         "Грудень",
     ]
-    return {"months": [(index + 1, month) for index, month in enumerate(months_list)]}
+    months = []
+    for index, month in enumerate(months_list):
+        if index + 1 == datetime.datetime.now().month:
+            months.append((index + 1, f"[{month}]"))
+        else:
+            months.append((index + 1, month))
+    return {"months": months}
 
 
 async def year_getter(
     dialog_manager: DialogManager, uow: UnitOfWork, event_from_user: User, **kwargs
 ):
-    return {"years": [(i, i) for i in range(2025, 2025 + 10)]}
+    years = []
+    for year in range(2025, 2025 + 10):
+        if year == datetime.datetime.now().year:
+            years.append((year, f"[{year}]"))
+        else:
+            years.append((year, str(year)))
+    return {"years": years}
 
 
 async def excel_file_getter(
@@ -119,7 +132,7 @@ async def work_schedule_getter(
     users = await uow.users.get_all_users_with_schedule()
     path_to_csv_file = create_work_schedule_csv(users, month=month, year=year)
 
-    locale.setlocale(locale.LC_TIME, "uk_UA.UTF-8")
+    locale.setlocale(locale.LC_TIME, ("uk_UA"))
     month_name = calendar.month_name[month].capitalize()
 
     return {
@@ -128,5 +141,5 @@ async def work_schedule_getter(
             type=ContentType.DOCUMENT,
         ),
         "month": month_name,
-        "year": year,
+        "year": str(year),
     }

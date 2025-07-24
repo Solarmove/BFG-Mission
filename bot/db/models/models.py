@@ -1,6 +1,6 @@
 from aiogram.enums import ContentType
 from sqlalchemy import BIGINT, BOOLEAN, ForeignKey, func, VARCHAR, INTEGER, TEXT
-from sqlalchemy.dialects.postgresql import ENUM, TIME, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ENUM, TIME, TIMESTAMP, DATE
 from sqlalchemy.orm import Mapped, mapped_column, Relationship
 
 from bot.db.base import Base
@@ -70,7 +70,7 @@ class WorkSchedule(Base):
     )
     start_time: Mapped[str] = mapped_column(TIME, nullable=False)
     end_time: Mapped[str] = mapped_column(TIME, nullable=False)
-    date = mapped_column(TIMESTAMP, nullable=False)
+    date = mapped_column(DATE, nullable=False)
 
     user: Mapped["User"] = Relationship(back_populates="work_schedules")
 

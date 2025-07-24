@@ -12,7 +12,7 @@ from bot.i18n.utils.i18n_format import I18nFormat
 class BackBtn(Back):
     def __init__(
         self,
-        text: Text = I18nFormat("back_btn"),
+        text: Text = I18nFormat("back-btn"),
         id: str = "__back__",
         on_click: Optional[OnClick] = None,
         show_mode: Optional[ShowMode] = None,

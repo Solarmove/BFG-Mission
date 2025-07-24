@@ -1,6 +1,7 @@
+import datetime
 from typing import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from bot.db.models.models import (
@@ -13,7 +14,7 @@ from bot.db.models.models import (
     TaskReport,
 )
 from bot.db.redis import redis_cache
-from bot.utils.enum import Role
+from bot.utils.enum import Role, TaskStatus
 from bot.utils.repository import SQLAlchemyRepository
 
 
@@ -55,9 +56,31 @@ class UserRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
+    @redis_cache(expiration=5)
+    async def get_user_from_hierarchy_count(self, level: Role):
+        stmt = select(func.count(self.model.id)).where(
+            self.model.hierarchy_level <= level
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none() or 0
+
 
 class WorkScheduleRepo(SQLAlchemyRepository):
     model = WorkSchedule
+
+    async def get_count_of_users_on_shift(self):
+        datetime_now = datetime.datetime.now()
+        stmt = (
+            select(func.count(self.model.id))
+            .where(
+                self.model.start_time <= datetime_now.time(),
+                self.model.end_time >= datetime_now.time(),
+                self.model.date == datetime_now.date(),
+            )
+            .group_by(self.model.user_id)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none() or 0
 
 
 class TaskCategoryRepo(SQLAlchemyRepository):
@@ -66,6 +89,23 @@ class TaskCategoryRepo(SQLAlchemyRepository):
 
 class TaskRepo(SQLAlchemyRepository):
     model = Task
+
+    async def get_my_current_task(self, user_id: int):
+        """Get the current task for a user."""
+        datetime_now = datetime.datetime.now()
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.executor_id == user_id,
+                self.model.status == TaskStatus.IN_PROGRESS,
+                self.model.start_datetime <= datetime_now,
+                self.model.end_datetime >= datetime_now,
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
 
 
 class TaskControlPointsRepo(SQLAlchemyRepository):

@@ -39,6 +39,7 @@ class Config(BaseSettings):
     path_to_locales: str = os.path.join(
         "bot", "i18n", "locales", "{locale}", "LC_MESSAGES"
     )
+    openai_api_key: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
