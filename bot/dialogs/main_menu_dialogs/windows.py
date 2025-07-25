@@ -18,7 +18,6 @@ enter_full_name_window = Window(
 )
 
 
-
 main_menu_window = Window(
     Multi(
         Case(

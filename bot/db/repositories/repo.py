@@ -1,5 +1,4 @@
 import datetime
-from typing import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
@@ -22,14 +21,19 @@ from bot.utils.repository import SQLAlchemyRepository
 class UserRepo(SQLAlchemyRepository):
     model = User
 
-    async def get_user_by_id(self, user_id: int) -> int | None:
+    async def get_all_users(self):
+        stmt = select(self.model).options(joinedload(self.model.position))
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
+    async def get_user_by_id(self, user_id: int) -> model | None:
         stmt = (
-            select(self.model.id)
+            select(self.model)
             .where(self.model.id == user_id)
             .options(joinedload(self.model.position))
         )
         res = await self.session.execute(stmt)
-        return res.scalar_one_or_none()
+        return res.scalars().first()
 
     async def get_user_full_name(self, user_id: int) -> str | None:
         """Get the full name of a user by their ID."""
@@ -44,6 +48,7 @@ class UserRepo(SQLAlchemyRepository):
             select(self.model)
             .where(self.model.id == user_id)
             .options(
+                joinedload(self.model.position),
                 selectinload(self.model.work_schedules),
                 selectinload(self.model.created_tasks),
                 selectinload(self.model.executed_tasks),
@@ -54,10 +59,11 @@ class UserRepo(SQLAlchemyRepository):
         return res.scalar_one_or_none()
 
     async def get_all_users_with_schedule(self):
-        stmt = select(self.model).options(selectinload(self.model.work_schedules))
+        stmt = select(self.model).options(
+            selectinload(self.model.work_schedules), joinedload(self.model.position)
+        )
         res = await self.session.execute(stmt)
         return res.scalars().all()
-
 
     @redis_cache(expiration=5)
     async def user_exist(self, user_id: int, update_cache: bool | None = None) -> bool:
@@ -150,7 +156,7 @@ class TaskRepo(SQLAlchemyRepository):
         creator_id: int | None = None,
         executor_id: int | None = None,
         category_id: int | None = None,
-        status: str | None = None,
+        status: TaskStatus | None = None,
         start_datetime: datetime.datetime | None = None,
         end_datetime: datetime.datetime | None = None,
     ):
@@ -175,7 +181,7 @@ class TaskRepo(SQLAlchemyRepository):
             stmt = stmt.where(self.model.start_datetime >= start_datetime)
         if end_datetime is not None:
             stmt = stmt.where(self.model.end_datetime <= end_datetime)
-
+        stmt = stmt.order_by(self.model.created_at.desc())
         res = await self.session.execute(stmt)
         return res.scalars().all()
 

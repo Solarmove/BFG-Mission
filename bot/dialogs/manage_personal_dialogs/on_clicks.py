@@ -13,7 +13,6 @@ from aiogram_dialog import DialogManager  # noqa: F401
 
 from ...exceptions.user_exceptions import InvalidCSVFile
 from ...services.csv_service import parse_work_schedule_csv
-from ...utils.consts import positions_map
 from ...utils.unitofwork import UnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -22,12 +21,10 @@ logger = logging.getLogger(__name__)
 async def select_position_click(
     call: CallbackQuery, widget: Select, manager: DialogManager, item_id: str
 ):
-    position_hierarchy_level = positions_map[item_id]
+    position_id = int(item_id)
     bot: Bot = manager.middleware_data["bot"]
 
-    link = await create_start_link(
-        bot, f"level={position_hierarchy_level}", encode=True
-    )
+    link = await create_start_link(bot, f"position={position_id}", encode=True)
     manager.dialog_data["reg_link"] = link
     await manager.next()
 

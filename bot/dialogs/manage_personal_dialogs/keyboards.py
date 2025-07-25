@@ -28,7 +28,7 @@ def manage_personal_dialogs_keyboard():
 def select_position_keyboard():
     return ScrollingGroup(
         Select(
-            Format("{item[0]}"),
+            Format("{item[1]}"),
             items="position_list",
             id="select_position",
             on_click=on_clicks.select_position_click,

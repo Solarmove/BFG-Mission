@@ -53,7 +53,7 @@ show_ai_answer_window = Window(
             scroll="ai_answer",
             text=Const("»"),
         ),
-        when=F["answer_len"] > 2000,
+        when=F["answer_len"] > 4000,
     ),
     MessageInput(
         func=on_clicks.on_send_query,
@@ -63,5 +63,4 @@ show_ai_answer_window = Window(
     state=states.AIAgentMenu.answer,
     getter=getters.ai_agent_answer_getter,
     # parse_mode=ParseMode.MARKDOWN_V2,
-
 )

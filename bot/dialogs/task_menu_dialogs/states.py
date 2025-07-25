@@ -19,4 +19,6 @@ class MyTasks(StatesGroup):
     This state group is used to manage personal tasks.
     """
 
-    select_action = State()  # Main menu state for personal task management
+    select_type_tasks = State()  # Active or Today or all
+    select_task = State()  # Select task to edit
+    show_task = State()

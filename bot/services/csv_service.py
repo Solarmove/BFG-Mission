@@ -58,7 +58,7 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
         row_data = [
             data.full_name or data.full_name_tg,
             data.id,
-            data.position_title or "Не вказано",
+            data.position.title or "Не вказано",
             f"{calendar.month_name[month]} {year}",
         ]
 

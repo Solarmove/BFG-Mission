@@ -33,7 +33,7 @@ async def main_menu_getter(
     current_task_text = None
     if user_model.position.hierarchy_level < 4:
         users_count = await uow.users.get_user_from_hierarchy_count(
-            user_model.hierarchy_level
+            user_model.position.hierarchy_level
         )
         users_on_shift = await uow.work_schedules.get_count_of_users_on_shift()
     if user_model.position.hierarchy_level > 1:

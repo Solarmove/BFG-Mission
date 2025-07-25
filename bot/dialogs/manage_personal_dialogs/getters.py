@@ -1,5 +1,4 @@
 import datetime
-from typing import Sequence
 import calendar
 import locale
 
@@ -10,27 +9,13 @@ from aiogram_dialog.api.entities import MediaAttachment
 
 from bot.services.csv_service import create_work_schedule_csv
 from bot.utils.unitofwork import UnitOfWork
-from bot.db.models.models import User as UserModel
-
-
-
 
 
 async def positions_getter(dialog_manager: DialogManager, uow: UnitOfWork, **kwargs):
+    positions = await uow.positions.find_all()
     return {
         "position_list": [
-            ("Директор",),
-            ("CEO",),
-            ("Асистент СЕО",),
-            ("Керуючий",),
-            ("HR",),
-            ("Головний бухгалтер",),
-            ("Бухгалтер",),
-            ("Менеджер з продажу",),
-            ("Менеджер по флористам",),
-            ("Логіст",),
-            ("Працівник складу",),
-            ("Флорист",),
+            (position.id, position.title) for position in positions if positions
         ]
     }
 

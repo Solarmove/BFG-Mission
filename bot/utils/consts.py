@@ -1,7 +1,7 @@
 from typing import Literal, TypeAlias
 
 POSITION_TITLES: TypeAlias = Literal[
-    "Директор",
+    "Власник",
     "CEO",
     "Асистент СЕО",
     "Керуючий",
@@ -16,7 +16,7 @@ POSITION_TITLES: TypeAlias = Literal[
 ]
 
 positions_map: dict[POSITION_TITLES, int] = {
-    "Директор": 1,
+    "Власник": 1,
     "CEO": 2,
     "Асистент СЕО": 2,
     "Керуючий": 3,

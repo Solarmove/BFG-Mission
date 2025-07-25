@@ -7,7 +7,6 @@ from aiogram_i18n import I18nContext
 from bot.dialogs.main_menu_dialogs.states import Registration, MainMenu
 from bot.filters.start_filters import IsAdmin, UserExists
 from bot.middleware.throttling import ThrottlingMiddleware
-from bot.utils.consts import get_positions_titles
 from bot.utils.unitofwork import UnitOfWork
 
 router = Router()
@@ -29,7 +28,6 @@ async def admin_start_handler(
         username=message.from_user.username,
         full_name_tg=message.from_user.full_name,
         position_id=owner_position.id if owner_position else None,
-        position_title=get_positions_titles(1)[0],
     )
 
     if user:
@@ -38,7 +36,7 @@ async def admin_start_handler(
     await uow.commit()
     await dialog_manager.start(
         Registration.enter_full_name,
-        data={"hierarchy_level": 1},
+        data={"position_id": owner_position.id},
         mode=StartMode.RESET_STACK,
     )
 
@@ -79,5 +77,4 @@ async def user_start_handler(
     Handler for the /start command.
     Initializes the user in the database and starts the dialog.
     """
-
     await dialog_manager.start(MainMenu.select_action, mode=StartMode.RESET_STACK)

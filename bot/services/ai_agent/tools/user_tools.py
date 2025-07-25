@@ -39,8 +39,8 @@ class UserTools(BaseTools):
                         username=user.username,
                         full_name_tg=user.full_name_tg,
                         full_name=user.full_name,
-                        hierarchy_level=user.hierarchy_level,
-                        position_title=user.position_title,
+                        position_id=user.position_id,
+                        position=user.position,
                         created_at=user.created_at,
                         updated_at=user.updated_at,
                     )
@@ -72,8 +72,8 @@ class UserTools(BaseTools):
                         username=user.username,
                         full_name_tg=user.full_name_tg,
                         full_name=user.full_name,
-                        hierarchy_level=user.hierarchy_level,
-                        position_title=user.position_title,
+                        position_id=user.position_id,
+                        position=user.position,
                         created_at=user.created_at,
                         updated_at=user.updated_at,
                         work_schedules=[
@@ -124,7 +124,7 @@ class UserTools(BaseTools):
                         ],
                     )
                 else:
-                    user = await self.uow.users.find_one(id=user_id)
+                    user = await self.uow.users.get_user_by_id(user_id=user_id)
                     if not user:
                         return None
                     return UserRead(
@@ -132,8 +132,8 @@ class UserTools(BaseTools):
                         username=user.username,
                         full_name_tg=user.full_name_tg,
                         full_name=user.full_name,
-                        hierarchy_level=user.hierarchy_level,
-                        position_title=user.position_title,
+                        position_id=user.position_id,
+                        position=user.position,
                         created_at=user.created_at,
                         updated_at=user.updated_at,
                     )
@@ -183,7 +183,7 @@ class UserTools(BaseTools):
             """
             Створити клавіатуру для завершення завдання.
 
-            :param task_id: ID завдання, яке потрібно завершити з БД.
+            :param task_id: ID завдання  з БД., яке потрібно завершити
 
             Returns:
                 ReplyMarkupUnion: Клавіатура для завершення завдання.

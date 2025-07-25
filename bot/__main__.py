@@ -17,6 +17,7 @@ from bot.handlers import routers_list
 from bot.i18n.utils.i18n_format import make_i18n_middleware
 from bot.middleware.db import DbSessionMiddleware
 from bot.middleware.i18n_dialog import RedisI18nMiddleware
+from bot.services.startup import on_startup
 
 from bot.utils.set_bot_commands import set_default_commands
 from configreader import config, RedisConfig
@@ -83,6 +84,7 @@ async def main():
     dp["arq"] = redis_pool
     dp["llm"] = llm
     await create_all()
+    await on_startup()
     await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
 
