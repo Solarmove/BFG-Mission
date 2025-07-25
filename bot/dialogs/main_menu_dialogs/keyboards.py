@@ -38,12 +38,12 @@ def main_menu_keyboard():
             id="ai_agent",
             state=AIAgentMenu.send_query,
         ),
-        Button(
-            I18nFormat("my-tasks-btn"),
-            id="my_tasks",
-            # on_click=on_clicks.my_tasks_click,
-            when=F["hierarchy_level"] > 1,
-        ),
+        # Button(
+        #     I18nFormat("my-tasks-btn"),
+        #     id="my_tasks",
+        #     # on_click=on_clicks.my_tasks_click,
+        #     when=F["hierarchy_level"] > 1,
+        # ),
         Start(
             I18nFormat("manage-personal-btn"),
             id="manage_personal",

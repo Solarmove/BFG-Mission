@@ -21,6 +21,13 @@ from bot.utils.repository import SQLAlchemyRepository
 class UserRepo(SQLAlchemyRepository):
     model = User
 
+    async def get_user_full_name(self, user_id: int) -> str | None:
+        """Get the full name of a user by their ID."""
+        stmt = select(self.model.full_name).where(self.model.id == user_id).limit(1)
+        res = await self.session.execute(stmt)
+        full_name = res.scalar_one_or_none()
+        return full_name
+
     async def get_user_with_all_data(self, user_id: int):
         """Get a user with all related data."""
         stmt = (
@@ -61,7 +68,9 @@ class UserRepo(SQLAlchemyRepository):
         self, user_id: int, update_cache: bool | None = None
     ) -> int | None:
         """Get the hierarchy level of a user."""
-        stmt = select(self.model.hierarchy_level).where(id=user_id).limit(1)
+        stmt = (
+            select(self.model.hierarchy_level).where(self.model.id == user_id).limit(1)
+        )
         res = await self.session.execute(stmt)
         hierarchy_level = res.scalar_one_or_none()
         return hierarchy_level if hierarchy_level is not None else None

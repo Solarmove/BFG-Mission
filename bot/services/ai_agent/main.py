@@ -1,3 +1,4 @@
+from pprint import pprint
 from typing import Sequence
 
 import langchain
@@ -49,6 +50,7 @@ class AIAgent:
             tools=tools,
             verbose=True,
             handle_parsing_errors=True,
+            return_intermediate_steps=True
             # max_iterations=3,
         )
         self._agent_with_history = RunnableWithMessageHistory(
@@ -71,3 +73,20 @@ class AIAgent:
             input={"input": content}, config=config
         )
         return result["output"]
+
+    async def stream_response(self, content: str):
+        config = RunnableConfig(
+            configurable={"session_id": str(self.chat_id or "default")}
+        )
+        response_text = ""
+        async for chunk in self._agent_with_history.astream(
+            input={"input": content}, config=config
+        ):
+            pprint(chunk)
+
+            if "output" in chunk:
+                response_text += chunk["output"]
+                yield response_text
+
+                # yield
+        # return response_text

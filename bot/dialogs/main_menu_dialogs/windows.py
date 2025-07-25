@@ -39,6 +39,7 @@ main_menu_window = Window(
             selector="hierarchy_level",
         ),
         Format("{current_task}", F["current_task"] & (~F["hierarchy_level"] > 1)),
+        sep="\n\n",
     ),
     keyboards.main_menu_keyboard(),
     state=states.MainMenu.select_action,

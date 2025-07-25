@@ -8,6 +8,7 @@ from aiogram.fsm.storage.redis import RedisEventIsolation, RedisStorage
 from aiogram_dialog import setup_dialogs
 from aiogram_i18n.cores import FluentRuntimeCore
 from arq import create_pool
+from langchain_openai import ChatOpenAI
 
 from bot.dialogs import dialog_routers
 from bot.db.base import create_all
@@ -19,6 +20,7 @@ from bot.middleware.i18n_dialog import RedisI18nMiddleware
 
 from bot.utils.set_bot_commands import set_default_commands
 from configreader import config, RedisConfig
+
 
 # Logging
 logging.basicConfig(
@@ -49,6 +51,15 @@ core = FluentRuntimeCore(path=config.path_to_locales)
 i18n_middleware = RedisI18nMiddleware(core=core, redis=redis)
 i18n_dialog_middleware = make_i18n_middleware(config.path_to_locales)
 
+llm = ChatOpenAI(
+    # model="gpt-3.5-turbo",
+    model="gpt-4o",
+    temperature=0.0,
+    # max_tokens=1000,
+    api_key=config.openai_api_key,
+    max_retries=3,
+)
+
 
 def include_middlewares():
     dp.update.middleware(i18n_middleware)
@@ -70,6 +81,7 @@ async def main():
     dp.include_router(router)
     dp["redis"] = redis
     dp["arq"] = redis_pool
+    dp["llm"] = llm
     await create_all()
     await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
