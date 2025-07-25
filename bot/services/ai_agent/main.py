@@ -87,6 +87,7 @@ class AIAgent:
             if "output" in chunk:
                 response_text += chunk["output"]
                 yield response_text
-
+            else:
+                yield None
                 # yield
         # return response_text

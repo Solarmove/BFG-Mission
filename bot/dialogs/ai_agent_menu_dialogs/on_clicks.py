@@ -3,7 +3,7 @@ import random
 import re
 from aiogram import Bot
 from aiogram.types import Message
-from aiogram_dialog import DialogManager, BaseDialogManager
+from aiogram_dialog import DialogManager, BaseDialogManager, ShowMode
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_i18n import I18nContext
 from arq import ArqRedis
@@ -19,19 +19,48 @@ from ...utils.unitofwork import UnitOfWork
 from . import states
 
 
-async def invoke_ai_agent(manager: BaseDialogManager, ai_agent: AIAgent, message_text):
+async def invoke_ai_agent(
+    manager: BaseDialogManager, ai_agent: AIAgent, message_text: str
+):
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""
-
     async for chunk in llm_response_generator:
+        if chunk is None:
+            await asyncio.sleep(0.5)
+            await manager.update({"answer": random.choice(waiting_phrases)})
+            continue
         print(chunk)
-        result_text = chunk
-        buffer = result_text
-        if len(result_text) % 50 == 0:
+        result_text += chunk
+        buffer += result_text
+        if len(result_text) % 10 == 0:
             await manager.update({"answer": result_text})
     if buffer:
         await manager.update({"answer": result_text})
+
+
+async def on_send_first_message_query(
+    message: Message, widget: MessageInput, manager: DialogManager
+):
+    """
+    Handles the first message query from the user.
+    """
+    llm: ChatOpenAI = manager.middleware_data["llm"]
+    arq: ArqRedis = manager.middleware_data["arq"]
+    redis: Redis = manager.middleware_data["redis"]
+    bot: Bot = manager.middleware_data["bot"]
+    task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
+    user_hierarchy_level = manager.dialog_data["hierarchy_level"]
+    prompt = get_prompt_from_hierarchy_level(user_hierarchy_level)
+    ai_agent = AIAgent(
+        model=llm,
+        tools=task_tools.get_tools(),
+        prompt=prompt,
+        redis_client=redis,
+        chat_id=message.from_user.id,
+    )
+    await ai_agent.clear_history()
+    return await on_send_query(message, widget, manager)
 
 
 async def on_send_query(message: Message, widget: MessageInput, manager: DialogManager):
@@ -44,7 +73,8 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     llm: ChatOpenAI = manager.middleware_data["llm"]
     arq: ArqRedis = manager.middleware_data["arq"]
     redis: Redis = manager.middleware_data["redis"]
-    task_tools = Tools(uow=UnitOfWork(), arq=arq)
+    bot: Bot = manager.middleware_data["bot"]
+    task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
     prompt = get_prompt_from_hierarchy_level(user_hierarchy_level)
     ai_agent = AIAgent(

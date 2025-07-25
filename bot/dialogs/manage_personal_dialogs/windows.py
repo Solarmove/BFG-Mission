@@ -13,7 +13,6 @@ manage_personal_window = Window(
     keyboards.manage_personal_dialogs_keyboard(),
     Cancel(I18nFormat("back-btn")),
     state=states.ManagePersonalMenu.select_action,
-    getter=getters.manage_personal_dialogs_getter,
 )
 
 

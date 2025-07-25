@@ -1,3 +1,4 @@
+from aiogram import Bot
 from arq import ArqRedis
 from bot.utils.unitofwork import UnitOfWork
 from .tools import (
@@ -12,13 +13,14 @@ from .tools import (
 class Tools:
     """Головний клас для управління всіма інструментами AI агента."""
 
-    def __init__(self, uow: UnitOfWork, arq: ArqRedis):
+    def __init__(self, uow: UnitOfWork, arq: ArqRedis, bot: Bot):
         self.uow = uow
         self.arq = arq
+        self.bot = bot
 
         # Ініціалізація всіх інструментів
         self.datetime_tools = DateTimeTools(uow, arq)
-        self.user_tools = UserTools(uow, arq)
+        self.user_tools = UserTools(uow, arq, bot)
         self.work_schedule_tools = WorkScheduleTools(uow, arq)
         self.category_tools = CategoryTools(uow, arq)
         self.task_tools = TaskTools(uow, arq)

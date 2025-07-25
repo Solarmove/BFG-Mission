@@ -18,14 +18,6 @@ enter_full_name_window = Window(
 )
 
 
-select_position_window = Window(
-    I18nFormat("select-position-text"),
-    keyboards.select_position_keyboard(),
-    BackBtn(),
-    state=states.Registration.select_position,
-    getter=getters.positions_getter,
-)
-
 
 main_menu_window = Window(
     Multi(

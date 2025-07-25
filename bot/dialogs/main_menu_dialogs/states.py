@@ -11,4 +11,3 @@ class MainMenu(StatesGroup):
 
 class Registration(StatesGroup):
     enter_full_name = State()
-    select_position = State()

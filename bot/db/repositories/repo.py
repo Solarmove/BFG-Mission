@@ -1,17 +1,18 @@
 import datetime
 from typing import Sequence
 
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload, selectinload
 
 from bot.db.models.models import (
+    Positions,
+    Task,
+    TaskCategory,
+    TaskControlPoints,
+    TaskReport,
     TaskReportContent,
     User,
     WorkSchedule,
-    TaskCategory,
-    Task,
-    TaskControlPoints,
-    TaskReport,
 )
 from bot.db.redis import redis_cache
 from bot.utils.enum import Role, TaskStatus
@@ -20,6 +21,15 @@ from bot.utils.repository import SQLAlchemyRepository
 
 class UserRepo(SQLAlchemyRepository):
     model = User
+
+    async def get_user_by_id(self, user_id: int) -> int | None:
+        stmt = (
+            select(self.model.id)
+            .where(self.model.id == user_id)
+            .options(joinedload(self.model.position))
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
 
     async def get_user_full_name(self, user_id: int) -> str | None:
         """Get the full name of a user by their ID."""
@@ -48,15 +58,6 @@ class UserRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
-    async def get_all_personal(self) -> Sequence[User]:
-        """Get all users with hierarchy level >= 2, ordered by full name."""
-        stmt = (
-            select(self.model)
-            .order_by(self.model.full_name)
-            .where(self.model.hierarchy_level >= 2)
-        )
-        res = await self.session.execute(stmt)
-        return res.scalars().all()
 
     @redis_cache(expiration=5)
     async def user_exist(self, user_id: int, update_cache: bool | None = None) -> bool:
@@ -69,21 +70,39 @@ class UserRepo(SQLAlchemyRepository):
     ) -> int | None:
         """Get the hierarchy level of a user."""
         stmt = (
-            select(self.model.hierarchy_level).where(self.model.id == user_id).limit(1)
+            select(self.model.position.hierarchy_level)
+            .where(self.model.id == user_id)
+            .options(joinedload(self.model.position))
         )
         res = await self.session.execute(stmt)
         hierarchy_level = res.scalar_one_or_none()
         return hierarchy_level if hierarchy_level is not None else None
 
     async def get_user_from_hierarchy(self, level: Role):
-        stmt = select(self.model).where(self.model.hierarchy_level <= level)
+        stmt = (
+            select(self.model)
+            .join(
+                Positions,
+                self.model.position_id == Positions.id,
+            )
+            .where(
+                Positions.hierarchy_level <= level,
+            )
+        )
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
     @redis_cache(expiration=5)
     async def get_user_from_hierarchy_count(self, level: Role):
-        stmt = select(func.count(self.model.id)).where(
-            self.model.hierarchy_level <= level
+        stmt = (
+            select(func.count(self.model.id))
+            .join(
+                Positions,
+                self.model.position_id == Positions.id,
+            )
+            .where(
+                Positions.hierarchy_level <= level,
+            )
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none() or 0
@@ -188,3 +207,7 @@ class TaskReportRepo(SQLAlchemyRepository):
 
 class TaskReportContentRepo(SQLAlchemyRepository):
     model = TaskReportContent
+
+
+class PositionRepo(SQLAlchemyRepository):
+    model = Positions

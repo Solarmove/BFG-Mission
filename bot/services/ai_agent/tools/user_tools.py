@@ -1,13 +1,26 @@
+from typing import Optional
+
+from aiogram import Bot
+from aiogram.types import Message, ReplyMarkupUnion, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from arq import ArqRedis
 from langchain_core.tools import tool
 from bot.entities.shared import UserReadExtended
 from bot.entities.task import TaskRead
 from bot.entities.users import UserRead, WorkScheduleRead
+from bot.utils.unitofwork import UnitOfWork
 from .base import BaseTools
 
 
 class UserTools(BaseTools):
     """Інструменти для роботи з користувачами."""
-    
+
+    def __init__(self, uow: UnitOfWork, arq: ArqRedis, bot: Bot):
+        super().__init__(uow, arq)
+        self.uow = uow
+        self.arq = arq
+        self.bot = bot
+
     def get_tools(self) -> list:
         @tool
         async def get_all_users_from_db() -> list[UserRead]:
@@ -125,7 +138,90 @@ class UserTools(BaseTools):
                         updated_at=user.updated_at,
                     )
 
+        @tool
+        async def create_reply_markup_for_accept_task(task_id: int) -> ReplyMarkupUnion:
+            """
+            Створити клавіатуру для прийняття завдання.
+
+            :param task_id: ID завдання, яке потрібно прийняти з БД
+
+            Returns:
+                ReplyMarkupUnion: Клавіатура для прийняття завдання.
+            """
+
+            kb = InlineKeyboardBuilder()
+            kb.add(
+                InlineKeyboardButton(
+                    text="Прийняти завдання",
+                    callback_data=f"accept_task:{task_id}",
+                )
+            )
+            return kb.as_markup()
+
+        @tool
+        async def create_reply_markup_for_show_task(task_id: int) -> ReplyMarkupUnion:
+            """
+            Створити клавіатуру для перегляду завдання.
+
+            :param task_id: ID завдання, яке потрібно переглянути з БД
+
+            Returns:
+                ReplyMarkupUnion: Клавіатура для перегляду завдання.
+            """
+
+            kb = InlineKeyboardBuilder()
+            kb.add(
+                InlineKeyboardButton(
+                    text="Переглянути завдання",
+                    callback_data=f"show_task:{task_id}",
+                )
+            )
+            return kb.as_markup()
+
+        @tool
+        async def create_reply_markup_for_done_task(task_id: int) -> ReplyMarkupUnion:
+            """
+            Створити клавіатуру для завершення завдання.
+
+            :param task_id: ID завдання, яке потрібно завершити з БД.
+
+            Returns:
+                ReplyMarkupUnion: Клавіатура для завершення завдання.
+            """
+
+            kb = InlineKeyboardBuilder()
+            kb.add(
+                InlineKeyboardButton(
+                    text="Завершити завдання",
+                    callback_data=f"done_task:{task_id}",
+                )
+            )
+            return kb.as_markup()
+
+        @tool
+        async def send_message(
+            chat_id: int, text: str, reply_markup: Optional[ReplyMarkupUnion] = None
+        ) -> Message:
+            """
+            Відправити повідомлення користувачу за його ID з БД.
+
+            :param chat_id: ID чату користувача, якому потрібно відправити повідомлення.
+            :param text: Текст повідомлення.
+            :param reply_markup: Додаткові кнопки або клавіатура для повідомлення (необов'язково).
+
+            Returns:
+                Message: Відправлене повідомлення.
+            """
+            msg = await self.bot.send_message(
+                chat_id=chat_id, text=text, reply_markup=reply_markup
+            )
+            return msg
+
         return [
             get_all_users_from_db,
             get_user_by_id,
+            create_reply_markup_for_accept_task,
+            create_reply_markup_for_show_task,
+            create_reply_markup_for_done_task,
+            send_message,
         ]

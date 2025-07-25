@@ -23,11 +23,12 @@ async def admin_start_handler(
     Handler for the /start command.
     Initializes the user in the database and starts the dialog.
     """
+    owner_position = await uow.positions.find_one(title="Власник")
     user = await uow.users.get_or_create(
         id=message.from_user.id,
         username=message.from_user.username,
         full_name_tg=message.from_user.full_name,
-        hierarchy_level=1,
+        position_id=owner_position.id if owner_position else None,
         position_title=get_positions_titles(1)[0],
     )
 
@@ -59,12 +60,12 @@ async def other_start_handler(
     if user_exist:
         return await message.answer(i18n.get("already-registered-text"))
     args = command.args
-    if not args.startswith("level="):
+    if not args.startswith("position="):
         return await message.answer(i18n.get("registration-error-text"))
-    hierarchy_level = int(args.split("=")[1])
+    position_id = int(args.split("=")[1])
     return await dialog_manager.start(
         Registration.enter_full_name,
-        data={"hierarchy_level": hierarchy_level},
+        data={"position_id": position_id},
         mode=StartMode.RESET_STACK,
     )
 

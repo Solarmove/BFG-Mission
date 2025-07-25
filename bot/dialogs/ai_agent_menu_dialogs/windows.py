@@ -25,7 +25,7 @@ send_query_window = Window(
         selector="hierarchy_level",
     ),
     MessageInput(
-        func=on_clicks.on_send_query,
+        func=on_clicks.on_send_first_message_query,
         content_types=[ContentType.TEXT, ContentType.VOICE],
     ),
     Cancel(I18nFormat("back-btn")),

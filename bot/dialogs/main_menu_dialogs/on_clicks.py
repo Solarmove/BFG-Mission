@@ -5,6 +5,7 @@ from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager, StartMode  # noqa: F401
 
+from ...db.models.models import Positions
 from ...utils.unitofwork import UnitOfWork
 
 
@@ -18,41 +19,23 @@ async def on_enter_full_name_click(
     Handle the click event when the user enters their full name.
     """
     uow: UnitOfWork = manager.middleware_data["uow"]
-    hierarchy_level = manager.start_data.get("hierarchy_level")
-    if hierarchy_level == 1:
+    position_model: Positions = await uow.positions.find_one(
+        id=manager.start_data.get("position_id")
+    )
+    if position_model.hierarchy_level == 1:
         await uow.users.edit_one(
             id=message.from_user.id, data=dict(full_name=full_name)
         )
-        await uow.commit()
-        await manager.start(states.MainMenu.select_action, mode=StartMode.RESET_STACK)
-        return
-    manager.dialog_data["full_name"] = full_name
-    await manager.next()
-
-
-async def on_select_position_click(
-    call: CallbackQuery,
-    widget: Select,
-    manager: DialogManager,
-    item_id: str,
-):
-    """
-    Handle the click event when the user selects a position.
-    """
-    uow: UnitOfWork = manager.middleware_data["uow"]
-    hierarchy_level = manager.start_data.get("hierarchy_level")
-    position_title = item_id
-    await uow.users.add_one(
-        data=dict(
-            id=call.from_user.id,
-            full_name=manager.dialog_data.get("full_name"),
-            full_name_tg=call.from_user.full_name,
-            username=call.from_user.username,
-            position_title=position_title,
-            hierarchy_level=hierarchy_level,
-        ),
-    )
+    else:
+        await uow.users.add_one(
+            data=dict(
+                id=message.from_user.id,
+                full_name=full_name,
+                full_name_tg=message.from_user.full_name,
+                username=message.from_user.username,
+                position_id=position_model.id,
+            ),
+        )
     await uow.commit()
-
-    await manager.start(states.MainMenu.select_action)
+    await manager.start(states.MainMenu.select_action, mode=StartMode.RESET_STACK)
 

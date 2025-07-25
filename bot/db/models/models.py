@@ -24,10 +24,13 @@ class User(Base):
         nullable=False,
     )
     full_name = mapped_column(VARCHAR(255), nullable=True, unique=True)
-    hierarchy_level = mapped_column(INTEGER, nullable=False)
-    position_title = mapped_column(
-        VARCHAR(255),
+    position_id: Mapped[int | None] = mapped_column(
+        INTEGER,
+        ForeignKey("positions.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    position: Mapped["Positions"] = Relationship(
+        back_populates="users",
     )
     created_at: Mapped[str] = mapped_column(
         TIMESTAMP,
@@ -52,6 +55,22 @@ class User(Base):
 
     reports: Mapped[list["TaskReport"]] = Relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class Positions(Base):
+    __tablename__ = "positions"
+
+    id: Mapped[int] = mapped_column(
+        INTEGER,
+        primary_key=True,
+        autoincrement=True,
+    )
+    title: Mapped[str] = mapped_column(VARCHAR(255), nullable=False, unique=True)
+    hierarchy_level: Mapped[int] = mapped_column(INTEGER, nullable=False)
+
+    users: Mapped[list["User"]] = Relationship(
+        back_populates="position", cascade="all, delete-orphan"
     )
 
 
