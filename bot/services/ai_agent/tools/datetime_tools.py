@@ -5,7 +5,7 @@ from .base import BaseTools
 
 class DateTimeTools(BaseTools):
     """Інструменти для роботи з датою та часом."""
-    
+
     def get_tools(self) -> list:
         @tool
         async def get_datetime():

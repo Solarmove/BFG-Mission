@@ -8,7 +8,7 @@ class PositionRead(BaseModel):
 
     id: int
     """Унікальний ідентифікатор позиції користувача в базі даних."""
-    name: str
+    title: str
     """Назва посади користувача."""
     hierarchy_level: int
     """рівень ієрархії користувача."""

@@ -1,6 +1,8 @@
 import datetime
 import json
+import logging
 from functools import wraps
+from json import JSONDecodeError
 
 from redis.asyncio import Redis
 
@@ -13,6 +15,8 @@ redis = Redis(
     # password=config.db_config.redis_password,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _make_cache_key(func, args, kwargs):
     # Формируем ключ только по простым типам (int, str, float)
@@ -20,14 +24,28 @@ def _make_cache_key(func, args, kwargs):
     for arg in args:
         if isinstance(arg, (int, str, float)):
             key_parts.append(str(arg))
+        elif isinstance(arg, (datetime.datetime, datetime.date)):
+            key_parts.append(arg.isoformat())
         else:
             key_parts.append(str(type(arg)))
     for k, v in kwargs.items():
         if isinstance(v, (int, str, float)):
             key_parts.append(f"{k}={v}")
+        elif isinstance(v, (datetime.datetime, datetime.date)):
+            key_parts.append(f"{k}={v.isoformat()}")
         else:
             key_parts.append(f"{k}={type(v)}")
     return ":".join(key_parts)
+
+
+def json_serializer(obj):
+    """Кастомный сериализатор для JSON"""
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    if hasattr(obj, "__dict__"):
+        return obj.__dict__
+    # Для других неподдерживаемых типов
+    return str(obj)
 
 
 def redis_cache(expiration=3600):
@@ -35,28 +53,34 @@ def redis_cache(expiration=3600):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             key = _make_cache_key(func, args, kwargs)
+            print(key)
             if kwargs.get("update_cache", False):
                 result = await func(*args, **kwargs)
                 try:
                     value_json = json.dumps(result, default=lambda o: o.__dict__)
-                except Exception:
+                except Exception as e:
+                    logger.info(f"Failed to serialize result: {e}")
                     value_json = str(result)
                 await redis.set(key, value_json, ex=expiration)
                 return result
             cached_result = await redis.get(key)
             if cached_result:
-                value_json = cached_result.decode("utf-8")
+                value_json = cached_result.decode()
                 try:
                     value = json.loads(value_json)
-                except Exception:
-                    value = value_json
-                return value
+                    print(f"Loaded from cache: {key}")
+                    return value
+                except JSONDecodeError as e:
+                    logger.info(f"Failed to load cached result: {e}")
+                    await redis.delete(key)  # Удаляем повреждённый кэш
+
             result = await func(*args, **kwargs)
             try:
-                value_json = json.dumps(result, default=lambda o: o.__dict__)
-            except Exception:
-                value_json = str(result)
-            await redis.set(key, value_json, ex=expiration)
+                value_json = json.dumps(result, default=json_serializer)
+                await redis.set(key, value_json, ex=expiration)
+            except Exception as e:
+                logger.info(f"Failed to serialize result: {e}")
+            print(f"Computed and cached: {key}")
             return result
 
         return wrapper

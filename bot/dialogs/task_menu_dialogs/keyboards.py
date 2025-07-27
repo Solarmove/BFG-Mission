@@ -3,26 +3,125 @@ import operator
 from aiogram_dialog.widgets.kbd import (
     Group,
     Select,
+    Row,
+    Radio,
+    ScrollingGroup,
+    Button,
+    PrevPage,
+    CurrentPage,
+    NextPage,
 )  # noqa: F401
-from aiogram_dialog.widgets.text import Format
+from aiogram_dialog.widgets.text import Format, Const
+from magic_filter import F
 
 from . import on_clicks, states  # noqa: F401
+from ...i18n.utils.i18n_format import I18nFormat
+from ...utils.enum import TaskStatus
 
 
 def select_type_of_task_keyboard():
     return Group(
+        Row(
+            Radio(
+                unchecked_text=Format("⚪️{item[1]}"),
+                checked_text=Format("🔘{item[1]}"),
+                id="radio_direction_task",
+                items=[
+                    ("income", "Вхідні"),
+                    ("outcome", "Вихідні"),
+                ],
+                item_id_getter=operator.itemgetter(0),
+                on_click=on_clicks.on_select_task_direction_click,
+            ),
+        ),
+        Group(
+            Select(
+                Format("{item[1]}"),
+                id="select_type_of_task",
+                items=[
+                    ("active", "В роботі"),
+                    ("new", "Нові"),
+                    ("done", "Виконані"),
+                    ("today", "Сьогоднішні"),
+                    ("all", "Всі"),
+                ],
+                item_id_getter=operator.itemgetter(0),
+                on_click=on_clicks.on_select_type_of_task_click,
+            ),
+            width=2,
+        ),
+    )
+
+
+def select_task_keyboard():
+    return ScrollingGroup(
         Select(
             Format("{item[1]}"),
-            id="select_type_of_task",
-            items=[
-                ("active", "В роботі"),
-                ("new", "Нові"),
-                ("done", "Виконані"),
-                ("today", "Сьогоднішні"),
-                ("all", "Всі"),
-            ],
+            id="select_task",
+            items="task_list",
             item_id_getter=operator.itemgetter(0),
-            on_click=on_clicks.on_select_type_of_task_click,
+            on_click=on_clicks.on_select_task,
         ),
-        width=2,
+        id="task_scroll",
+        width=1,
+        height=6,
+        hide_on_single_page=True,
+    )
+
+
+def action_with_task_keyboard():
+    return Group(
+        Button(
+            I18nFormat("cancel-task-btn"),
+            id="cancel_task",
+            on_click=on_clicks.on_cancel_task_click,
+            when=~F["am_i_executor"] & F["task_status"].not_in([TaskStatus.CANCELED]),
+        ),
+        Button(
+            I18nFormat("confirm-btn"),
+            id="confirm_task",
+            on_click=on_clicks.on_confirm_task_click,
+            when=F["task_status"].in_([TaskStatus.NEW]) & F["am_i_executor"],
+        ),
+        Button(
+            I18nFormat("complete-task-btn"),
+            id="complete_task",
+            on_click=on_clicks.on_complete_task_click,
+            when=F["task_status"].in_([TaskStatus.IN_PROGRESS]) & F["am_i_executor"],
+        ),
+        ScrollingGroup(
+            Select(
+                Format("{item[1]}"),
+                id="complete_control_point",
+                items="control_points_list",
+                item_id_getter=operator.itemgetter(0),
+                on_click=on_clicks.on_select_control_point,
+            ),
+            id="control_point_scroll",
+            width=1,
+            height=6,
+            hide_on_single_page=True,
+            when=F["data"]["control_points_list"],
+        ),
+    )
+
+
+def scroll_keyboard(scroll_id: str):
+    return Row(
+        PrevPage(
+            text=Const("«"),
+            scroll=scroll_id,
+            when=F["pages"] > 1,
+        ),
+        CurrentPage(
+            text=Format("{current_page1}/{pages}"),
+            scroll=scroll_id,
+            when=F["pages"] > 1,
+        ),
+        NextPage(
+            text=Const("»"),
+            scroll=scroll_id,
+            when=F["pages"] > 1,
+        ),
+        
     )

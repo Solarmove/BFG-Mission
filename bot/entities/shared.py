@@ -1,5 +1,6 @@
 from typing import Optional
 
+from bot.entities.report_read import TaskReportRead
 from bot.entities.task import TaskRead, TaskCategoryRead, TaskControlPointRead
 from bot.entities.users import UserRead, WorkScheduleRead
 
@@ -15,6 +16,7 @@ class TaskReadExtended(TaskRead):
     """Користувач, який виконує завдання."""
     task_control_points: list["TaskControlPointRead"] | None = None
     """Список контрольних точок звіту завдання. Може бути None, якщо контрольні точки не передбачені."""
+    reports: Optional[list["TaskReportRead"]] = None
 
 
 class UserReadExtended(UserRead):

@@ -28,34 +28,28 @@ main-menu-1-level-text = {-main-menu-shared}
     <i>{$datetime_now}</i>
     @{$username} ({$full_name}), <i>{$position}</i>
 
-    К-ть працівників: {$users_count}
-    К-ть працівників на зміні: {$users_on_shift_count}
-
 
 main-menu-2-level-text = {-main-menu-shared}
 
     <i>{$datetime_now}</i>
     @{$username} ({$full_name}), <i>{$position}</i>
 
-    К-ть працівників: {$users_count}
-    К-ть працівників на зміні: {$users_on_shift_count}
 
 main-menu-3-level-text = {-main-menu-shared}
 
     <i>{$datetime_now}</i>
     @{$username} ({$full_name}), <i>{$position}</i>
 
-    К-ть працівників: {$users_count}
-    К-ть працівників на зміні: {$users_on_shift_count}
 
 main-menu-4-level-text = {-main-menu-shared}
 
     <i>{$datetime_now}</i>
     @{$username} ({$full_name}), <i>{$position}</i>
 
-my_current_task = Поточне завдання
-    {$task_title}
-    Виконати до: {$task_deadline}
+task_in_work = <b>Завдання в роботі:</b>
+
+task_data_text = <blockquote><b>«{$task_title}»</b>
+    🔥Виконати до: {$task_deadline}</blockquote>
 
 create-reg-link-btn = Створити посилання для реєстрації
 manage-work-schedule-btn = Управління робочим графіком
@@ -226,3 +220,87 @@ ai-agent-send-query-text-4 = 📝 Вітаю, {$full_name}!
     "Що потрібно для звіту по завданню?"
     Я допоможу вам ефективно організувати робочий день! 💪
 ai-agent-btn = 🔮AI-Помічник
+show-task-text = {$task_status_emoji}<b>{$task_title}</b>
+    <b>«{$task_category}»</b>
+    <blockquote>{$task_description}</blockquote>
+
+    <b>- {$task_photo_required}
+    - {$task_video_required}
+    - {$task_file_required}</b>
+
+    <b>Створив:</b> {$task_creator}
+    <b>Виконавець:</b> {$task_executor}
+    <b>Статус:</b> {$task_status_text}
+
+    <blockquote><b>Дата початку:</b> {$task_start_datetime}
+    {$is_task_hot}<b>Дедлайн:</b> {$task_end_datetime}{$is_task_hot}
+    <b>Завершено:</b> {$task_completed_datetime}</blockquote>
+
+    <b>Контрольні точки:</b>
+    {$control_points}
+
+    <b>Звіти:</b>
+    <i>{$report_texts}</i>
+
+task-status-in-progress-emoji = 🔄
+task-status-new-emoji = 🆕
+task-status-completed-emoji = ✅
+task-status-canceled-emoji = ❌
+task-status-overdue-emoji = ⏳
+task-status-in-progress = 🔄Виконується
+task-status-new = 🆕Нове
+task-status-completed = ✅Завершено
+task-status-canceled = ❌Скасовано
+task-status-overdue = ⏳Прострочено
+task-no-description = Немає опису
+control-point-not-completed = ❌Котрольна точка не виконана
+task-no-category = Немає категорії
+task-photo-required-yes = 📷Фото обов'язкове
+task-photo-required-no = 📷Фото не обов'язкове
+task-video-required-yes = 🎥Відео обов'язкове
+task-video-required-no = 🎥Відео не обов'язкове
+task-file-required-yes = 📂Файл обов'язковий
+task-file-required-no = 📂Файл не обов'язковий
+task-confirmed-notification = ✅Завдання <b>{$task_title}</b> підтверджено <b>{$executor_full_name}</b> та почало виконуватись
+task-confirmed-alert = Ви підтвердили завдання {$task_title}
+complete-task-btn = ✅Завершити завдання
+complete-point-btn = ✅Завершити контрольну точку {$point_number}
+task-confirmed-error = ❌Помилка підтвердження завдання
+task-canceled-error = ❌Помилка скасування завдання
+task-canceled-notification = ❌Завдання <b>{$task_title}</b> скасовано {$creator_full_name}
+task-canceled-alert = Ви скасували завдання {$task_title}
+media-deleted-alert = ❌Медіа #{$media_number} видалено!
+photo-required-error = 📷Фото обов'язкове. Додайте хоча б одне фото
+video-required-error = 🎥Відео обов'язкове. Додайте хоча б одне відео
+file-required-error = 📂Файл обов'язковий. Додайте хоча б один файл
+confirm-complete-task-text = Ви впевнені, що хочете завершити завдання <b>{$task_title}</b>?
+    Цю дію не можна буде скасувати.
+task-completed-error = ❌Помилка завершення завдання
+task-completed-in-time-notification = ✅ Працівник <b>{$executor_full_name}</b> виконав задачу <b>{$task_title}</b> вчасно
+    Звіт: <i>{$report_text}</i>
+task-completed-overdue-notification = ⚠️ Працівник <b>{$executor_full_name}</b> виконав задачу <b>{$task_title}</b> запізненням {$overdue_time}
+    Звіт: <i>{$report_text}</i>
+task-completed-in-time-alert = ✅ Ви завершили завдання {$task_title} вчасно
+task-completed-overdue-alert = ⚠️ Ви завершили завдання {$task_title} з запізненням {$overdue_time}
+deadline-overdue-alert = 🔴 Дедлайн прострочено! Завдання {$task_title} не виконано вчасно
+deadline-comming-alert = ⚠️ Увага! Через 30 хвилин спливає термін завдання: {$task_title}.
+    Натисніть, щоб перейти до виконання
+delete-media-btn = 🗑Видалити медіа #{$media_number}
+select-type-of-task-text = Виберіть тип завдання та фільтр:
+
+    <b>Вибрані фільтри:</b> <i>{$task_direction}, {$task_type}</i>
+select-task-text = Виберіть завдання для перегляду
+
+    <b>Вибрані фільтри:</b> <i>{$task_direction}, {$task_type}</i>
+task-not-completed = ❌Завдання не виконано
+task-no-control-points = Немає контрольних точок
+cancel-task-btn = ❌Скасувати завдання
+enter-report-text = Введть текст звіту про зроблену роботу
+send-media-for-report-text = Надішліть медіа для звіту про зроблену роботу
+    Ви можете завантажити фото, відео або файл
+skip-btn = Пропустити
+done-send-media-btn = Готово
+task-no-reports = Немає звітів
+task_not_for_you = ❌Це завдання не для вас
+task_already_accepted = ❌Це завдання не може бути прийнято
+task_cant_be_completed = ❌Це завдання не може бути завершено

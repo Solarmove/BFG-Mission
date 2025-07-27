@@ -30,6 +30,7 @@ class ChangeWorkSchedule(StatesGroup):
     """
     State group for changing work schedule in bulk.
     """
+
     select_month = State()
     select_year = State()
     send_excel_file = State()  # State for sending Excel file
@@ -37,11 +38,11 @@ class ChangeWorkSchedule(StatesGroup):
     error = State()
 
 
-
 class ShowSchedule(StatesGroup):
     """
     State group for showing work schedule.
     """
+
     select_month = State()
     select_year = State()
     show_schedule = State()

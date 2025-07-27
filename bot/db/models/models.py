@@ -164,7 +164,7 @@ class Task(Base):
         back_populates="task",
         cascade="all, delete-orphan",
     )
-    report: Mapped["TaskReport"] = Relationship(
+    reports: Mapped[list["TaskReport"]] = Relationship(
         back_populates="task",
     )
 
@@ -216,6 +216,7 @@ class TaskReport(Base):
     task_control_point_id: Mapped[int] = mapped_column(
         INTEGER,
         ForeignKey("task_control_points.id", ondelete="CASCADE"),
+        nullable=True,
     )
     report_text: Mapped[str] = mapped_column(TEXT, nullable=False)
     created_at: Mapped[str] = mapped_column(
@@ -223,7 +224,7 @@ class TaskReport(Base):
         server_default=func.now(),
     )
 
-    task: Mapped["Task"] = Relationship(back_populates="report")
+    task: Mapped["Task"] = Relationship(back_populates="reports")
     content: Mapped[list["TaskReportContent"]] = Relationship(
         back_populates="report",
         cascade="all, delete-orphan",

@@ -1,7 +1,12 @@
 import datetime
 from langchain_core.tools import tool
 from bot.entities.shared import TaskReadExtended
-from bot.entities.task import TaskCategoryRead, TaskControlPointRead, TaskCreate, TaskUpdate
+from bot.entities.task import (
+    TaskCategoryRead,
+    TaskControlPointRead,
+    TaskCreate,
+    TaskUpdate,
+)
 from bot.entities.users import UserRead
 from bot.utils.enum import TaskStatus
 from .base import BaseTools
@@ -9,7 +14,7 @@ from .base import BaseTools
 
 class TaskTools(BaseTools):
     """Інструменти для роботи з завданнями."""
-    
+
     def get_tools(self) -> list:
         @tool
         async def create_one_task(
@@ -159,7 +164,7 @@ class TaskTools(BaseTools):
                         status=task.status,
                         category=(
                             TaskCategoryRead(
-                                id=task.category.id, name=task.category.name
+                                id=task.category.id, name=task.category.title
                             )
                             if task.category
                             else None

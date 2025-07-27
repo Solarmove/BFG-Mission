@@ -1,4 +1,4 @@
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 
 from . import states, getters, on_clicks  # noqa: F401
 from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
@@ -38,4 +38,3 @@ async def on_enter_full_name_click(
         )
     await uow.commit()
     await manager.start(states.MainMenu.select_action, mode=StartMode.RESET_STACK)
-

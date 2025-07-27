@@ -5,7 +5,6 @@ from aiogram_dialog.widgets.text import Const, Format, Case, Multi  # noqa: F401
 from magic_filter import F
 
 from ...i18n.utils.i18n_format import I18nFormat
-from ...utils.dialog_utils import BackBtn
 from . import getters, keyboards, on_clicks, states  # noqa: F401
 
 enter_full_name_window = Window(
@@ -29,7 +28,7 @@ main_menu_window = Window(
             },
             selector="hierarchy_level",
         ),
-        Format("{current_task}", F["current_task"] & (~F["hierarchy_level"] > 1)),
+        Format("{current_task}", F["current_task"] & (F["hierarchy_level"] > 1)),
         sep="\n\n",
     ),
     keyboards.main_menu_keyboard(),

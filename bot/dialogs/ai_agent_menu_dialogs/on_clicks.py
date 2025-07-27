@@ -1,9 +1,8 @@
 import asyncio
-import random
-import re
+
 from aiogram import Bot
 from aiogram.types import Message
-from aiogram_dialog import DialogManager, BaseDialogManager, ShowMode
+from aiogram_dialog import BaseDialogManager, DialogManager
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_i18n import I18nContext
 from arq import ArqRedis
@@ -13,7 +12,6 @@ from redis.asyncio import Redis
 from ...services.ai_agent.main import AIAgent
 from ...services.ai_agent.prompts import get_prompt_from_hierarchy_level
 from ...services.ai_agent.tools_manager import Tools
-from ...utils.consts import waiting_phrases
 from ...utils.misc import voice_to_text
 from ...utils.unitofwork import UnitOfWork
 from . import states
@@ -27,10 +25,7 @@ async def invoke_ai_agent(
     buffer = ""
     async for chunk in llm_response_generator:
         if chunk is None:
-            await asyncio.sleep(0.5)
-            await manager.update({"answer": random.choice(waiting_phrases)})
             continue
-        print(chunk)
         result_text += chunk
         buffer += result_text
         if len(result_text) % 10 == 0:
@@ -59,7 +54,7 @@ async def on_send_first_message_query(
         redis_client=redis,
         chat_id=message.from_user.id,
     )
-    await ai_agent.clear_history()
+    await ai_agent.clear_history()  # TODO: запитати чи потрібно очищати історію
     return await on_send_query(message, widget, manager)
 
 
@@ -93,7 +88,6 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         await message.answer(i18n.get("ai-agent-doesnt-support-this-content-type"))
         return
     # llm_response = await ai_agent.invoke(message_text)
-    manager.dialog_data["answer"] = random.choice(waiting_phrases)
+    manager.dialog_data["answer"] = "Опрацьовуємо ваш запит, будь ласка, зачекайте..."
     await manager.switch_to(states.AIAgentMenu.answer)
     asyncio.create_task(invoke_ai_agent(manager.bg(), ai_agent, message_text))
-

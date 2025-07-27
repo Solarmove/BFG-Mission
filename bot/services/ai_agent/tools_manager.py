@@ -42,4 +42,3 @@ class Tools:
 
         print(all_tools)
         return all_tools
-

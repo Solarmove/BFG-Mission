@@ -1,11 +1,31 @@
 from langchain_core.tools import tool
+
+from bot.db.redis import redis_cache
 from bot.entities.task import TaskCategoryRead
 from .base import BaseTools
 
 
 class CategoryTools(BaseTools):
     """Інструменти для роботи з категоріями завдань."""
-    
+
+    @redis_cache(60)
+    async def get_categories_dict(self):
+        """
+        Отримати словник всіх категорій завдань з бази даних.
+
+        Returns:
+            list[dict]: Список словників, де кожен словник містить інформацію про категорію завдання.
+
+        """
+        async with self.uow:
+            categories = await self.uow.task_categories.find_all()
+            return [
+                TaskCategoryRead.model_validate(
+                    category, from_attributes=True
+                ).model_dump()
+                for category in categories
+            ]
+
     def get_tools(self) -> list:
         @tool
         async def get_categories_from_db() -> list[TaskCategoryRead]:
@@ -15,12 +35,11 @@ class CategoryTools(BaseTools):
             Returns:
                 list[TaskCategoryRead]: List of all task categories.
             """
-            async with self.uow:
-                categories = await self.uow.task_categories.find_all()
-                return [
-                    TaskCategoryRead(id=category.id, name=category.name)
-                    for category in categories
-                ]
+
+            categories = await self.get_categories_dict()
+            return [
+                TaskCategoryRead.model_validate(category) for category in categories
+            ]
 
         @tool
         async def get_category_by_id(category_id: int) -> TaskCategoryRead | None:
@@ -35,7 +54,7 @@ class CategoryTools(BaseTools):
             async with self.uow:
                 category = await self.uow.task_categories.find_one(id=category_id)
                 if category:
-                    return TaskCategoryRead(id=category.id, name=category.name)
+                    return TaskCategoryRead(id=category.id, name=category.title)
                 return None
 
         @tool

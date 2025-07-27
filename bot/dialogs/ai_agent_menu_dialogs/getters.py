@@ -16,7 +16,7 @@ async def ai_agent_getter(
     """
     hierarchy_level = await uow.users.get_user_hierarchy_level(event_from_user.id)
     my_full_name = await uow.users.get_user_full_name(event_from_user.id)
-    dialog_manager.dialog_data['hierarchy_level'] = hierarchy_level
+    dialog_manager.dialog_data["hierarchy_level"] = hierarchy_level
     return {
         "hierarchy_level": hierarchy_level,
         "full_name": my_full_name or event_from_user.full_name,

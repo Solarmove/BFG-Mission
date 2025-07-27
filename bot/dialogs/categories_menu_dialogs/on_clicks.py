@@ -28,7 +28,7 @@ async def on_select_category(
     uow: UnitOfWork = manager.middleware_data["uow"]
     manager.dialog_data["category_id"] = int(item_id)
     category_model = await uow.task_categories.find_one(id=int(item_id))
-    manager.dialog_data["category_name"] = category_model.name
+    manager.dialog_data["category_name"] = category_model.title
     await manager.next()
 
 

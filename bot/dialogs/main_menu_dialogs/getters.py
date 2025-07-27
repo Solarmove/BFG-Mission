@@ -30,20 +30,23 @@ async def main_menu_getter(
     user_model: UserModel = await uow.users.get_user_by_id(user_id=event_from_user.id)
     users_count = None
     users_on_shift = None
-    current_task_text = None
+    current_task_text = ""
     if user_model.position.hierarchy_level < 4:
         users_count = await uow.users.get_user_from_hierarchy_count(
             user_model.position.hierarchy_level
         )
         users_on_shift = await uow.work_schedules.get_count_of_users_on_shift()
     if user_model.position.hierarchy_level > 1:
-        current_task: Task = await uow.tasks.get_my_current_task(user_model.id)
-        if current_task:
-            current_task_text = i18n.get(
-                "my_current_task",
-                task_title=current_task.title,
-                end_datetime=current_task.end_datetime,
-            )
+        current_tasks: list[Task] = await uow.tasks.get_task_in_work(user_model.id)
+        current_task_text = ""
+        if current_tasks:
+            current_task_text += i18n.get("task_in_work")
+            for task in current_tasks:
+                current_task_text += i18n.get(
+                    "task_data_text",
+                    task_title=task.title,
+                    task_deadline=task.end_datetime.strftime("%d.%m.%Y, %H:%M"),
+                )
     return {
         "datetime_now": datetime.datetime.now(),
         "full_name": user_model.full_name or user_model.full_name_tg,

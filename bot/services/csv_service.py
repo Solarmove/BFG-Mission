@@ -37,7 +37,7 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
 
     # Create a string buffer for CSV data
     output = StringIO()
-    writer = csv.writer(output, delimiter=';')
+    writer = csv.writer(output, delimiter=";")
 
     # Write headers
     writer.writerow(headers)

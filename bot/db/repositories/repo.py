@@ -14,6 +14,8 @@ from bot.db.models.models import (
     WorkSchedule,
 )
 from bot.db.redis import redis_cache
+from bot.entities.shared import TaskReadExtended
+from bot.entities.task import TaskRead
 from bot.utils.enum import Role, TaskStatus
 from bot.utils.repository import SQLAlchemyRepository
 
@@ -76,13 +78,13 @@ class UserRepo(SQLAlchemyRepository):
     ) -> int | None:
         """Get the hierarchy level of a user."""
         stmt = (
-            select(self.model.position.hierarchy_level)
+            select(self.model)
             .where(self.model.id == user_id)
             .options(joinedload(self.model.position))
         )
         res = await self.session.execute(stmt)
-        hierarchy_level = res.scalar_one_or_none()
-        return hierarchy_level if hierarchy_level is not None else None
+        result = res.scalar_one_or_none()
+        return result.position.hierarchy_level if result is not None else None
 
     async def get_user_from_hierarchy(self, level: Role):
         stmt = (
@@ -151,6 +153,59 @@ class TaskCategoryRepo(SQLAlchemyRepository):
 class TaskRepo(SQLAlchemyRepository):
     model = Task
 
+    @redis_cache(expiration=30)
+    async def get_task_by_id(self, task_id: int):
+        """Get a task by its ID."""
+        stmt = (
+            select(self.model)
+            .where(self.model.id == task_id)
+            .options(
+                joinedload(self.model.creator).joinedload(User.position),
+                joinedload(self.model.executor).joinedload(User.position),
+                joinedload(self.model.category),
+                selectinload(self.model.control_points),
+                joinedload(self.model.reports),
+            )
+        )
+        res = await self.session.execute(stmt)
+        result = res.unique().scalar_one_or_none()
+        if result is None:
+            return None
+        task_model = TaskReadExtended.model_validate(result, from_attributes=True)
+        return task_model.model_dump() if task_model else None
+
+    @redis_cache(expiration=30)
+    async def get_all_task_simple(
+        self,
+        creator_id: int | None = None,
+        executor_id: int | None = None,
+        category_id: int | None = None,
+        status: TaskStatus | None = None,
+        start_datetime: datetime.datetime | None = None,
+        end_datetime: datetime.datetime | None = None,
+    ):
+        """Get all tasks with optional filters."""
+        stmt = select(self.model)
+        if creator_id is not None:
+            stmt = stmt.where(self.model.creator_id == creator_id)
+        if executor_id is not None:
+            stmt = stmt.where(self.model.executor_id == executor_id)
+        if category_id is not None:
+            stmt = stmt.where(self.model.category_id == category_id)
+        if status is not None:
+            stmt = stmt.where(self.model.status == status)
+        if start_datetime is not None:
+            stmt = stmt.where(self.model.start_datetime >= start_datetime)
+        if end_datetime is not None:
+            stmt = stmt.where(self.model.end_datetime <= end_datetime)
+        stmt = stmt.order_by(self.model.created_at.desc())
+        res = await self.session.execute(stmt)
+        result = res.scalars().all()
+        return [
+            TaskRead.model_validate(task, from_attributes=True).model_dump()
+            for task in result
+        ]
+
     async def get_all_tasks(
         self,
         creator_id: int | None = None,
@@ -166,7 +221,7 @@ class TaskRepo(SQLAlchemyRepository):
             joinedload(self.model.executor),
             joinedload(self.model.category),
             selectinload(self.model.control_points),
-            joinedload(self.model.report),
+            joinedload(self.model.reports),
         )
         if creator_id is not None:
             stmt = stmt.where(self.model.creator_id == creator_id)
@@ -185,7 +240,7 @@ class TaskRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
-    async def get_my_current_task(self, user_id: int):
+    async def get_task_in_work(self, user_id: int):
         """Get the current task for a user."""
         datetime_now = datetime.datetime.now()
         stmt = (
@@ -193,14 +248,11 @@ class TaskRepo(SQLAlchemyRepository):
             .where(
                 self.model.executor_id == user_id,
                 self.model.status == TaskStatus.IN_PROGRESS,
-                self.model.start_datetime <= datetime_now,
-                self.model.end_datetime >= datetime_now,
             )
             .order_by(self.model.created_at.desc())
-            .limit(1)
         )
         res = await self.session.execute(stmt)
-        return res.scalar_one_or_none()
+        return res.scalars().all()
 
 
 class TaskControlPointsRepo(SQLAlchemyRepository):

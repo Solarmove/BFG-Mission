@@ -1,5 +1,5 @@
 import os
-
+from datetime import datetime, timedelta
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram.utils.link import create_tg_link
@@ -26,6 +26,7 @@ async def recognize_text(file_path: str) -> str:
         )
     return transcription.text
 
+
 async def voice_to_text(bot: Bot, message: Message) -> str:
     os.makedirs(".upload_dir", exist_ok=True)
     path_to_voice = f".upload_dir/{message.voice.file_id}.ogg"
@@ -33,3 +34,9 @@ async def voice_to_text(bot: Bot, message: Message) -> str:
     message_text = await recognize_text(path_to_voice)
     os.remove(path_to_voice)
     return message_text
+
+
+def is_task_hot(task_deadline: datetime) -> bool:
+    """Проверяет, горячее ли задание"""
+    current_time = datetime.now()
+    return task_deadline - current_time <= timedelta(minutes=30)

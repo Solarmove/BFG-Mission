@@ -68,7 +68,7 @@ confirm_delete_category_window = Window(
 
 done_delete_category_window = Window(
     I18nFormat("done-delete-category-text"),
-    Cancel(I18nFormat('close-btn')),
+    Cancel(I18nFormat("close-btn")),
     state=states.DeleteCategory.done,
     getter=getters.get_category_for_delete,
 )
