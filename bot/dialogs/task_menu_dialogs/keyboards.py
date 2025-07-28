@@ -72,6 +72,11 @@ def select_task_keyboard():
 def action_with_task_keyboard():
     return Group(
         Button(
+            I18nFormat("update-btn"),
+            id="update_task",
+            on_click=on_clicks.on_update_task_click,
+        ),
+        Button(
             I18nFormat("cancel-task-btn"),
             id="cancel_task",
             on_click=on_clicks.on_cancel_task_click,
@@ -104,12 +109,12 @@ def action_with_task_keyboard():
             width=1,
             height=6,
             hide_on_single_page=True,
-            when=F["data"]["control_points_list"],
+            when="control_points_list",
         ),
     )
 
 
-def scroll_keyboard(scroll_id: str, custom_text: Text|None = None):
+def scroll_keyboard(scroll_id: str, custom_text: Text | None = None):
     current_page_text = custom_text or Format("{current_page1}/{pages}")
     return Row(
         PrevPage(

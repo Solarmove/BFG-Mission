@@ -16,7 +16,11 @@ class BotConfig(BaseSettings):
     token: str
     parse_mode: str
     bot_channel_id: int
-    logs_channel_thread_id: int
+    info_logs_channel_thread_id: int
+    error_logs_channel_thread_id: int
+    debug_logs_channel_thread_id: int
+    warning_logs_channel_thread_id: int
+    critical_logs_channel_thread_id: int
 
 
 class DBConfig(BaseSettings):

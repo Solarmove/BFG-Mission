@@ -54,6 +54,7 @@ def redis_cache(expiration=3600):
         async def wrapper(*args, **kwargs):
             key = _make_cache_key(func, args, kwargs)
             if kwargs.get("update_cache", False):
+                logger.info("Force cache update for key: %s", key)
                 result = await func(*args, **kwargs)
                 try:
                     value_json = json.dumps(result, default=json_serializer)

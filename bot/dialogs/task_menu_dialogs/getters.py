@@ -1,4 +1,5 @@
 import datetime
+from pprint import pprint
 
 from aiogram.types import User  # noqa: F401
 from aiogram_dialog import DialogManager  # noqa: F401
@@ -7,6 +8,7 @@ from aiogram_dialog.widgets.common import ManagedScroll, ManagedWidget
 from aiogram_dialog.widgets.kbd import ManagedRadio
 from aiogram_i18n import I18nContext
 
+from bot.db.models.models import TaskControlPoints
 from bot.entities.shared import TaskReadExtended
 from bot.entities.task import TaskRead
 from bot.utils.enum import TaskStatus
@@ -170,18 +172,18 @@ async def get_task(
     dialog_manager.dialog_data["title"] = task.title
     data = {
         "report_media_list": report_content_list,
-        "report_texts": "\n\n".join(
+        "report_texts": "\n".join(
             [
-                f"<blockquote>{report_text}</blockquote>"
-                for report_text in report_text_list
+                f"<blockquote>{index + 1}. {report_text}</blockquote>"
+                for index, report_text in enumerate(report_text_list)
             ]
         )
         if report_text_list
         else i18n.get("task-no-reports"),
         "task_title": task.title,
         "task_description": task.description or i18n.get("task-no-description"),
-        "task_start_datetime": task.start_datetime.strftime("%Y-%m-%d, %H:%M"),
-        "task_end_datetime": task.end_datetime.strftime("%Y-%m-%d, %H:%M"),
+        "task_start_datetime": task.start_datetime.strftime("%d.%m.%Y, %H:%M"),
+        "task_end_datetime": task.end_datetime.strftime("%d.%m.%Y, %H:%M"),
         "task_category": task.category.name
         if task.category
         else i18n.get("task-no-category"),
@@ -197,16 +199,17 @@ async def get_task(
         "task_creator": task.creator.full_name or task.creator.full_name_tg,
         "task_executor": task.executor.full_name or task.executor.full_name_tg,
         "task_completed_datetime": (
-            task.completed_datetime.strftime("%Y-%m-%d, %H:%M")
+            task.completed_datetime.strftime("%d.%m.%Y, %H:%M")
             if task.completed_datetime
             else i18n.get("task-not-completed")
         ),
         "control_points": "\n".join(
-            f"▶️ {index + 1}. {cp.description[:50]}, <i>{cp.deadline}</i>\n"
-            f"Виконано: {cp.datetime_complete if cp.datetime_complete else i18n.get('control-point-not-completed')}"
-            for index, cp in enumerate(task.task_control_points)
+            f'▶️ {index + 1}. "{cp.description}"\n'
+            f"<b>Дедлайн</b>: <i>{cp.deadline.strftime('%d.%m.%Y, %H:%M')}</i>\n"
+            f"<b>Виконано:</b> {cp.datetime_complete.strftime('%d.%m.%Y, %H:%M') if cp.datetime_complete else i18n.get('control-point-not-completed')}"
+            for index, cp in enumerate(task.control_points)
         )
-        if task.task_control_points
+        if task.control_points
         else i18n.get("task-no-control-points"),
         "task_status_emoji": task_emoji_status_mapper[task.status],
         "task_status_text": task_status_mapper[task.status],
@@ -214,11 +217,11 @@ async def get_task(
         "is_task_hot": "🔥" if is_task_hot(task.end_datetime) else "",
         "am_i_executor": task.executor_id == event_from_user.id,
         "control_points_list": [
-            (cp.id, f"Завершити контр. точку #{index + 1}")
-            for index, cp in enumerate(task.task_control_points)
+            (cp.id, f'Завершити "{cp.description[:20]}"')
+            for index, cp in enumerate(task.control_points)
             if cp.datetime_complete is None
         ]
-        if task.task_control_points
+        if task.control_points
         else [],
     }
     return data
@@ -246,13 +249,9 @@ async def get_sent_media(
         ],
         "pages": len(dialog_manager.dialog_data.get("report_media_list", [])),
         "delete_media": i18n.get("delete-media-btn", media_number=current_page + 1),
-        "can_skip": not all(
-            [
-                dialog_manager.start_data["photo_required"],
-                dialog_manager.start_data["video_required"],
-                dialog_manager.start_data["file_required"],
-            ]
-        ),
+        "can_skip": dialog_manager.start_data["photo_required"] is False
+        and dialog_manager.start_data["video_required"] is False
+        and dialog_manager.start_data["file_required"] is False,
     }
 
 
@@ -263,8 +262,16 @@ async def get_task_before_complete(
     i18n: I18nContext,
     **kwargs: dict,
 ):
+    control_point_description = None
+    if dialog_manager.start_data.get("control_point_id", False):
+        control_point: TaskControlPoints = await uow.task_control_points.find_one(
+            id=dialog_manager.start_data["control_point_id"]
+        )
+        control_point_description = control_point.description
     return {
         "task_title": dialog_manager.start_data["title"],
+        "control_point_description": control_point_description,
+        "control_point_exist": True
+        if dialog_manager.start_data.get("control_point_id", False)
+        else False,
     }
-
-

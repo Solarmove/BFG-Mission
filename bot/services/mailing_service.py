@@ -7,7 +7,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 logger = logging.getLogger(__name__)
 
 
-async def  send_message(
+async def send_message(
     bot: Bot,
     chat_id: int,
     text: str,

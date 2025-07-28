@@ -14,7 +14,6 @@ def create_end_task_kb(task_id: int) -> InlineKeyboardMarkup:
     return data
 
 
-
 def create_show_task_kb(task_id: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.add(

@@ -9,6 +9,7 @@ from aiogram_i18n import I18nContext
 from bot.db.models.models import Task, User
 from bot.dialogs.task_menu_dialogs.states import MyTasks, CompleteTask
 from bot.entities.shared import TaskReadExtended
+from bot.services.log_service import LogService
 from bot.services.mailing_service import send_message
 from bot.utils.enum import TaskStatus
 from bot.utils.unitofwork import UnitOfWork
@@ -22,9 +23,9 @@ logger = logging.getLogger(__name__)
 async def accept_task_callback(
     call: CallbackQuery,
     uow: UnitOfWork,
-    dialog_manager: DialogManager,
     i18n: I18nContext,
     bot: Bot,
+    channel_log: LogService,
 ):
     task_id = int(call.data.split(":")[1])
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
@@ -42,6 +43,15 @@ async def accept_task_callback(
     except Exception as e:
         logger.info(f"Error while confirming task: {e}")
         await call.answer(i18n.get("task-confirmed-error"))
+        await channel_log.error(
+            "Помилка при підтвердженні завдання",
+            extra_info={
+                "Завдання": task_model_extended.title,
+                "Помилка": f"<blockquote>{e}</blockquote>",
+                "Виконавець": task_model_extended.executor.full_name
+                or task_model_extended.executor.full_name_tg,
+            },
+        )
         return
     await send_message(
         bot,
@@ -56,6 +66,14 @@ async def accept_task_callback(
     await call.answer(
         i18n.get("task-confirmed-alert", task_title=task_model_extended.title),
         show_alert=True,
+    )
+    await channel_log.info(
+        "Завдання підтверджено",
+        extra_info={
+            "Завдання": task_model_extended.title,
+            "Виконавець": task_model_extended.executor.full_name
+            or task_model_extended.executor.full_name_tg,
+        },
     )
     new_kb = InlineKeyboardBuilder()
     await call.message.edit_reply_markup(

@@ -12,7 +12,7 @@ async def category_menu_getter(
     categories = await uow.task_categories.find_all()
     return {
         "categories": "\n".join(
-            [f" - {category.title}" for category in categories if categories]
+            [f" - {category.name}" for category in categories if categories]
         )
         if categories
         else "Категорій немає",

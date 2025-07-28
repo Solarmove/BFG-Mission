@@ -170,7 +170,7 @@ class TaskRepo(SQLAlchemyRepository):
                 joinedload(self.model.creator).joinedload(User.position),
                 joinedload(self.model.executor).joinedload(User.position),
                 joinedload(self.model.category),
-                selectinload(self.model.control_points),
+                joinedload(self.model.control_points),
                 joinedload(self.model.reports),
             )
         )
@@ -321,4 +321,3 @@ class AnalyticsRepo(SQLAlchemyRepository):
             TaskReadExtended.model_validate(task, from_attributes=True).model_dump()
             for task in result
         ]
-

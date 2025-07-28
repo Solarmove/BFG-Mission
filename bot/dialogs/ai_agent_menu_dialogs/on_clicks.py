@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 from ...services.ai_agent.main import AIAgent
 from ...services.ai_agent.prompts import get_prompt_from_hierarchy_level
 from ...services.ai_agent.tools_manager import Tools
+from ...services.log_service import LogService
 from ...utils.misc import voice_to_text
 from ...utils.unitofwork import UnitOfWork
 from . import states
@@ -53,6 +54,7 @@ async def on_send_first_message_query(
     arq: ArqRedis = manager.middleware_data["arq"]
     redis: Redis = manager.middleware_data["redis"]
     bot: Bot = manager.middleware_data["bot"]
+    channel_log: LogService = manager.middleware_data["channel_log"]
     task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
     prompt = get_prompt_from_hierarchy_level(user_hierarchy_level)
@@ -62,6 +64,7 @@ async def on_send_first_message_query(
         prompt=prompt,
         redis_client=redis,
         chat_id=message.from_user.id,
+        log_service=channel_log,
     )
     await ai_agent.clear_history()  # TODO: запитати чи потрібно очищати історію
     return await on_send_query(message, widget, manager)
@@ -78,6 +81,7 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     arq: ArqRedis = manager.middleware_data["arq"]
     redis: Redis = manager.middleware_data["redis"]
     bot: Bot = manager.middleware_data["bot"]
+    channel_log: LogService = manager.middleware_data["channel_log"]
     task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
     prompt = get_prompt_from_hierarchy_level(user_hierarchy_level)
@@ -87,6 +91,7 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         prompt=prompt,
         redis_client=redis,
         chat_id=message.from_user.id,
+        log_service=channel_log,
     )
 
     if message.text:
@@ -96,7 +101,6 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     else:
         await message.answer(i18n.get("ai-agent-doesnt-support-this-content-type"))
         return
-    # llm_response = await ai_agent.invoke(message_text)
     manager.dialog_data["answer"] = "Опрацьовуємо ваш запит, будь ласка, зачекайте..."
     await manager.switch_to(states.AIAgentMenu.answer)
     asyncio.create_task(invoke_ai_agent(manager.bg(), ai_agent, message_text))

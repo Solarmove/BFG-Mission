@@ -1,6 +1,14 @@
 from aiogram.enums import ContentType
-from sqlalchemy import BIGINT, BOOLEAN, ForeignKey, func, VARCHAR, INTEGER, TEXT, \
-    UniqueConstraint
+from sqlalchemy import (
+    BIGINT,
+    BOOLEAN,
+    ForeignKey,
+    func,
+    VARCHAR,
+    INTEGER,
+    TEXT,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import ENUM, TIME, TIMESTAMP, DATE
 from sqlalchemy.orm import Mapped, mapped_column, Relationship
 
@@ -95,10 +103,9 @@ class WorkSchedule(Base):
     user: Mapped["User"] = Relationship(back_populates="work_schedules")
 
     __table_args__ = (
-        UniqueConstraint(
-            "user_id", "date", name="unique_user_id_date_work_schedule"
-        ),
+        UniqueConstraint("user_id", "date", name="unique_user_id_date_work_schedule"),
     )
+
 
 class TaskCategory(Base):
     __tablename__ = "task_categories"

@@ -19,6 +19,7 @@ from openai import RateLimitError
 from redis.asyncio import Redis
 
 from bot.services.ai_agent.utils.redis_chat_history import RedisChatMessageHistory
+from bot.services.log_service import LogService
 from bot.utils.consts import unallowed_characters
 
 # example of using OpenAI's GPT-4o model
@@ -34,9 +35,11 @@ class AIAgent:
         model: BaseChatModel,
         tools: Sequence[BaseTool],
         prompt: ChatPromptTemplate,
+        log_service: LogService,
         chat_id: int | None = None,
         redis_client: Redis | None = None,
     ):
+        self.log_service = log_service
         self.redis_client = redis_client
         self.chat_id = chat_id
         self.model = model
@@ -110,6 +113,10 @@ class AIAgent:
         response_text = ""
         have_response = False
         tries = 0
+        log_text = f"<b>Запит до AI агента</b>"
+        await self.log_service.info(
+            log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
+        )
         while not have_response and tries <= 15:
             try:
                 async for chunk in self._agent_with_history.astream(
@@ -132,6 +139,14 @@ class AIAgent:
                         have_response = True
                         response_text += self.replace_unallowed_characters(
                             chunk["output"]
+                        )
+                        log_text = f"<b>Відповідь AI агента</b>"
+                        await self.log_service.info(
+                            log_text,
+                            extra_info={
+                                "Відповідь": response_text,
+                                "Chat ID": self.chat_id,
+                            },
                         )
                         yield response_text, None
                     else:

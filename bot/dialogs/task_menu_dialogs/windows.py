@@ -3,7 +3,7 @@ from aiogram_dialog import Window
 from aiogram_dialog.widgets.input import MessageInput, TextInput
 from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Next
 from aiogram_dialog.widgets.media import DynamicMedia, MediaScroll
-from aiogram_dialog.widgets.text import Format
+from aiogram_dialog.widgets.text import Format, Case
 from magic_filter import F
 
 from ...i18n.utils.i18n_format import I18nFormat
@@ -68,14 +68,14 @@ send_media_window = Window(
         I18nFormat("done-send-media-btn"),
         id="done_send_media",
         on_click=on_clicks.on_done_send_media,
-        when=F["pages"] > 1,
+        when=F["pages"] >= 1,
     ),
     keyboards.scroll_keyboard("report_media_scroll"),
     Button(
         Format("{delete_media}"),
         id="delete_media",
         on_click=on_clicks.on_delete_media,
-        when=F["pages"] > 1,
+        when=F["pages"] >= 1,
     ),
     Back(I18nFormat("back-btn")),
     state=states.CompleteTask.send_media,
@@ -84,7 +84,15 @@ send_media_window = Window(
 
 
 confirm_complete_task_window = Window(
-    I18nFormat("confirm-complete-task-text"),
+    Case(
+        {
+            True: I18nFormat(
+                "confirm-complete-task-text-control-point"
+            ),
+            False: I18nFormat("confirm-complete-task-text"),
+        },
+        selector='control_point_exist',
+    ),
     Button(
         I18nFormat("confirm-btn"),
         id="confirm_complete_task",

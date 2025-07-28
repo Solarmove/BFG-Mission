@@ -11,9 +11,20 @@ from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput
 from aiogram_dialog.widgets.kbd import Button, Select
 from aiogram_i18n import I18nContext
 
-from ...db.models.models import Task
+from ...db.models.models import TaskControlPoints
 from ...entities.shared import TaskReadExtended
+from ...services.log_service import LogService
 from ...services.mailing_service import send_message
+from ...services.task_services import (
+    _create_task_report,
+    _complete_control_point,
+    _complete_task,
+    _handle_completion_error,
+    _send_completion_notifications,
+    _log_completion,
+    is_completed_in_time_func,
+    get_overdue_time,
+)
 from ...utils.enum import TaskStatus
 from ...utils.misc import humanize_timedelta
 from ...utils.unitofwork import UnitOfWork
@@ -49,6 +60,7 @@ async def on_confirm_task_click(
     uow: UnitOfWork = manager.middleware_data["uow"]
     bot: Bot = manager.middleware_data["bot"]
     i18n: I18nContext = manager.middleware_data["i18n"]
+    channel_log: LogService = manager.middleware_data.get("channel_log")
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
 
@@ -57,9 +69,20 @@ async def on_confirm_task_click(
         await uow.commit()
     except Exception as e:
         logger.info(f"Error while confirming task: {e}")
+        await channel_log.error(
+            "Помилка при підтвердженні завдання",
+            extra_info={
+                "ID завдання": task_id,
+                "Помилка": f"<blockquote>{e}</blockquote>",
+                "Користувач": call.from_user.full_name,
+                "Username": f"@{call.from_user.username}"
+                if call.from_user.username
+                else "Немає",
+            },
+        )
         await call.answer(i18n.get("task-confirmed-error"))
         return
-    task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
+    task_model_dict: dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
     task_model = TaskReadExtended.model_validate(task_model_dict)
     await send_message(
         bot,
@@ -74,6 +97,17 @@ async def on_confirm_task_click(
     await call.answer(
         i18n.get("task-confirmed-alert", task_title=task_model.title), show_alert=True
     )
+    await channel_log.info(
+        "Користувач підтвердив завдання",
+        extra_info={
+            "Завдання": task_model.title,
+            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
+            "Виконавець": task_model.executor.full_name
+            or task_model.executor.full_name_tg,
+            "Хто створив": task_model.creator.full_name
+            or task_model.creator.full_name_tg,
+        },
+    )
 
 
 async def on_cancel_task_click(
@@ -82,6 +116,7 @@ async def on_cancel_task_click(
     uow: UnitOfWork = manager.middleware_data["uow"]
     bot: Bot = manager.middleware_data["bot"]
     i18n: I18nContext = manager.middleware_data["i18n"]
+    channel_log: LogService = manager.middleware_data.get("channel_log")
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
     try:
@@ -90,6 +125,17 @@ async def on_cancel_task_click(
     except Exception as e:
         logger.info(f"Error while canceling task: {e}")
         await call.answer(i18n.get("task-canceled-error"))
+        await channel_log.error(
+            "Помилка при скасуванні завдання",
+            extra_info={
+                "ID завдання": task_id,
+                "Помилка": f"<blockquote>{e}</blockquote>",
+                "Користувач": call.from_user.full_name,
+                "Username": f"@{call.from_user.username}"
+                if call.from_user.username
+                else "Немає",
+            },
+        )
         return
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
     task_model = TaskReadExtended.model_validate(task_model_dict)
@@ -107,12 +153,36 @@ async def on_cancel_task_click(
         i18n.get("task-canceled-alert", task_title=task_model.title),
         show_alert=True,
     )
+    await channel_log.info(
+        "Користувач скасував завдання",
+        extra_info={
+            "Завдання": task_model.title,
+            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
+            "Виконавець": task_model.executor.full_name
+            or task_model.executor.full_name_tg,
+            "Хто створив": task_model.creator.full_name
+            or task_model.creator.full_name_tg,
+        },
+    )
 
 
 async def on_complete_task_click(
     call: CallbackQuery, widget: Button, manager: DialogManager
 ):
     start_data = manager.start_data or {}
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
+    task_model = await uow.tasks.find_one(id=task_id)
+    if task_model.status in [
+        TaskStatus.COMPLETED,
+        TaskStatus.OVERDUE,
+        TaskStatus.CANCELED,
+    ]:
+        await call.answer(
+            i18n.get("task-already-completed-or-canceled"), show_alert=True
+        )
+        return
     await manager.start(
         states.CompleteTask.enter_report_text,
         data={
@@ -139,6 +209,14 @@ async def on_select_control_point(
 ):
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    control_point_model: TaskControlPoints = await uow.task_control_points.find_one(
+        id=int(item_id)
+    )
+    if control_point_model.datetime_complete is not None:
+        await call.answer(i18n.get("control-point-already-completed"), show_alert=True)
+        return
     await manager.start(
         states.CompleteTask.enter_report_text,
         data={
@@ -251,104 +329,95 @@ async def on_confirm_complete_task_click(
     uow: UnitOfWork = manager.middleware_data["uow"]
     bot: Bot = manager.middleware_data["bot"]
     i18n: I18nContext = manager.middleware_data["i18n"]
+    channel_log: LogService = manager.middleware_data.get("channel_log")
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
     control_point_id = manager.start_data.get("control_point_id")
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
-    print(task_id)
-    print(task_model_dict)
+    control_point_model = None
     task_model = TaskReadExtended.model_validate(task_model_dict)
     report_text = manager.dialog_data.get("report_text", "")
     report_media_list = manager.dialog_data.get("report_media_list", [])
     datetime_complete = datetime.datetime.now()
-    is_completed_in_time = datetime_complete <= task_model.end_datetime
-    overdue_time = task_model.end_datetime - datetime_complete
-    try:
-        report_id = await uow.task_reports.add_one(
-            data=dict(
-                user_id=call.from_user.id,
-                task_id=task_id,
-                task_control_point_id=control_point_id,
-                report_text=report_text,
-            )
+    is_control_point = bool(control_point_id)
+    if is_control_point:
+        control_point_model = await uow.task_control_points.find_one(
+            id=control_point_id
         )
-        media_group_builder = MediaGroupBuilder()
-        for media in report_media_list:
-            if media["content_type"] == ContentType.PHOTO:
-                media_group_builder.add_photo(
-                    media=media["file_id"],
-                )
-            elif media["content_type"] == ContentType.VIDEO:
-                media_group_builder.add_video(
-                    media=media["file_id"],
-                )
-            elif media["content_type"] == ContentType.DOCUMENT:
-                media_group_builder.add_document(
-                    media=media["file_id"],
-                )
-            await uow.task_report_contents.add_one(
-                data=dict(
-                    report_id=report_id,
-                    file_id=media["file_id"],
-                    file_unique_id=media["file_unique_id"],
-                    content_type=media["content_type"],
-                )
-            )
-        if not control_point_id:
-            await uow.tasks.edit_one(
-                id=task_id,
-                data={
-                    "status": TaskStatus.COMPLETED
-                    if is_completed_in_time
-                    else TaskStatus.OVERDUE,
-                    "completed_datetime": datetime_complete,
-                },
+
+    is_completed_in_time = is_completed_in_time_func(
+        task_model, datetime_complete, control_point_model
+    )
+    overdue_time = get_overdue_time(task_model, datetime_complete, control_point_model)
+
+    try:
+        # Створюємо звіт
+        report_id, media_group_builder = await _create_task_report(
+            uow,
+            call,
+            task_id,
+            control_point_id,
+            report_text,
+            report_media_list,
+        )
+
+        # Завершуємо завдання або контрольну точку
+        if is_control_point:
+            await _complete_control_point(
+                uow,
+                control_point_id,
+                datetime_complete,
             )
         else:
-            await uow.task_control_points.edit_one(
-                id=control_point_id,
-                data={"datetime_complete": datetime_complete},
+            await _complete_task(
+                uow,
+                task_id,
+                datetime_complete,
+                is_completed_in_time,
             )
+
         await uow.commit()
     except Exception as e:
-        logger.info(f"Error while completing task: {e}")
-        await call.answer(i18n.get("task-completed-error"))
+        await _handle_completion_error(
+            call,
+            i18n,
+            channel_log,
+            task_id,
+            e,
+            is_control_point,
+        )
         return
-    text_for_creator = (
-        i18n.get(
-            "task-completed-in-time-notification",
-            task_title=task_model.title,
-            executor_full_name=task_model.executor.full_name
-            or task_model.executor.full_name_tg,
-            report_text=report_text,
-        )
-        if is_completed_in_time
-        else i18n.get(
-            "task-completed-overdue-notification",
-            task_title=task_model.title,
-            executor_full_name=task_model.executor.full_name
-            or task_model.executor.full_name_tg,
-            overdue_time=humanize_timedelta(overdue_time),
-            report_text=report_text,
-        )
-    )
-    await send_message(
+
+    # Відправляємо сповіщення
+    text_for_executor = await _send_completion_notifications(
         bot,
-        task_model.creator_id,
-        text=text_for_creator,
-        media_group=media_group_builder,
+        i18n,
+        task_model,
+        report_text,
+        media_group_builder,
+        is_completed_in_time,
+        overdue_time,
+        is_control_point,
+        control_point_model,
     )
-    text_for_executor = (
-        i18n.get(
-            "task-completed-in-time-alert",
-            task_title=task_model.title,
-        )
-        if is_completed_in_time
-        else i18n.get(
-            "task-completed-overdue-alert",
-            task_title=task_model.title,
-            overdue_time=humanize_timedelta(overdue_time),
-        )
-    )
+
     await call.answer(text_for_executor, show_alert=True)
+
+    # Логуємо завершення
+    await _log_completion(
+        channel_log, task_model, control_point_id, report_text, is_control_point
+    )
+
     await manager.done()
+
+
+async def on_update_task_click(
+    call: CallbackQuery, widget: Button, manager: DialogManager
+):
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    start_data = manager.start_data or {}
+    task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
+
+    await uow.tasks.get_task_by_id(task_id, update_cache=True)
+    await call.answer(i18n.get("task-updated-alert"))
