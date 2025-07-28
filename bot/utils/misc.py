@@ -40,3 +40,22 @@ def is_task_hot(task_deadline: datetime) -> bool:
     """Проверяет, горячее ли задание"""
     current_time = datetime.now()
     return task_deadline - current_time <= timedelta(minutes=30)
+
+
+def humanize_timedelta(td: timedelta) -> str:
+    total_seconds = int(td.total_seconds())
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    parts = []
+    if days:
+        parts.append(f"{days} д.")
+    if hours:
+        parts.append(f"{hours} г.")
+    if minutes:
+        parts.append(f"{minutes} мин.")
+    if seconds:
+        parts.append(f"{seconds} сек.")
+
+    return " ".join(parts) if parts else "0 сек."

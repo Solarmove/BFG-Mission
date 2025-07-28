@@ -53,11 +53,10 @@ def redis_cache(expiration=3600):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             key = _make_cache_key(func, args, kwargs)
-            print(key)
             if kwargs.get("update_cache", False):
                 result = await func(*args, **kwargs)
                 try:
-                    value_json = json.dumps(result, default=lambda o: o.__dict__)
+                    value_json = json.dumps(result, default=json_serializer)
                 except Exception as e:
                     logger.info(f"Failed to serialize result: {e}")
                     value_json = str(result)
@@ -68,7 +67,6 @@ def redis_cache(expiration=3600):
                 value_json = cached_result.decode()
                 try:
                     value = json.loads(value_json)
-                    print(f"Loaded from cache: {key}")
                     return value
                 except JSONDecodeError as e:
                     logger.info(f"Failed to load cached result: {e}")
@@ -80,7 +78,6 @@ def redis_cache(expiration=3600):
                 await redis.set(key, value_json, ex=expiration)
             except Exception as e:
                 logger.info(f"Failed to serialize result: {e}")
-            print(f"Computed and cached: {key}")
             return result
 
         return wrapper

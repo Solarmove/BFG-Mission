@@ -8,10 +8,18 @@ from langchain_core.tools import tool
 
 from bot.db.redis import redis_cache
 from bot.entities.shared import UserReadExtended
-from bot.entities.users import UserRead
+from bot.entities.users import UserRead, PositionRead
+from bot.keyboards.task import (
+    create_end_task_kb,
+    create_show_task_kb,
+    create_accept_task_kb,
+)
+from bot.services.ai_agent.entities import UserToolsData
 from bot.utils.unitofwork import UnitOfWork
 
 from .base import BaseTools
+from ..entities import UserToolsData
+from ...mailing_service import send_message
 
 
 class UserTools(BaseTools):
@@ -65,7 +73,99 @@ class UserTools(BaseTools):
                 for user in users
             ]
 
-    def get_tools(self) -> list:
+    @redis_cache(120)
+    async def get_positions_func(self):
+        """
+        Отримати всі позиції користувачів.
+
+        Returns:
+            list: Список всіх посад користувачів.
+        """
+        async with self.uow:
+            positions = await self.uow.positions.find_all()
+            return [
+                PositionRead.model_validate(position, from_attributes=True).model_dump()
+                for position in positions
+            ]
+
+    @redis_cache(120)
+    async def get_position_by_id(self, position_id: int) -> PositionRead | None:
+        """
+        Отримати посаду користувача за її ID.
+
+        :param position_id: ID позиції, яку потрібно отримати.
+
+        Returns:
+            PositionRead | None: Позиція або None, якщо позиція не знайдена.
+        """
+        async with self.uow:
+            position = await self.uow.positions.get_by_id(position_id)
+            if not position:
+                return None
+            return PositionRead.model_validate(
+                position, from_attributes=True
+            ).model_dump()
+
+    @redis_cache(120)
+    async def get_user_position(self, user_id: int) -> PositionRead | None:
+        """
+        Отримати посаду користувача за його ID.
+        :param user_id: ID користувача, для якого потрібно отримати позицію.
+        """
+        async with self.uow:
+            user = await self.uow.users.get_user_by_id(user_id)
+            if not user:
+                return None
+            if not user.position_id:
+                return
+            return PositionRead.model_validate(
+                user.position, from_attributes=True
+            ).model_dump()
+
+    def get_tools(self) -> UserToolsData:
+        @tool
+        async def get_positions(self):
+            """
+            Отримати всі позиції користувачів.
+
+            Returns:
+                list: Список всіх позицій користувачів.
+            """
+            result = await self.get_positions_func()
+            return [PositionRead.model_validate(position) for position in result]
+
+        @tool
+        async def get_position_by_id_func(position_id: int) -> PositionRead | None:
+            """
+            Отримати позицію користувача за її ID.
+
+            :param position_id: ID позиції, яку потрібно отримати.
+
+            Returns:
+                PositionRead | None: Позиція або None, якщо позиція не знайдена.
+            """
+            result = await self.get_position_by_id(position_id)
+            if result is None:
+                return None
+            return PositionRead.model_validate(result)
+
+        @tool
+        async def get_user_position(
+            user_id: int,
+        ) -> PositionRead | None:
+            """
+            Отримати посаду користувача за його ID.
+
+            :param user_id: ID користувача, для якого потрібно отримати позицію.
+
+            Returns:
+                PositionRead | None: Позиція або None, якщо позиція не знайдена.
+            """
+            result = await self.get_user_position(user_id)
+            if result is None:
+                return None
+            return PositionRead.model_validate(result)
+
         @tool
         async def get_all_users_from_db() -> list[UserRead]:
             """
@@ -99,24 +199,35 @@ class UserTools(BaseTools):
             return UserRead.model_validate(result)
 
         @tool
+        async def get_user_hierarchy(
+            user_id: int,
+        ) -> int | None:
+            """
+            Отримати ієрархію користувачів за ID користувача.
+
+            :param user_id: ID користувача, для якого потрібно отримати ієрархію.
+            Returns:
+                int| None: рівень ієрархії користувача.
+                Якщо користувач не знайдений, повертає None.
+            """
+            user = await self.get_user_dict(user_id, extended=False)
+            if user is None:
+                return None
+            user_model = UserRead.model_validate(user)
+            return user_model.position.hierarchy_level
+
+        @tool
         async def create_reply_markup_for_accept_task(task_id: int) -> ReplyMarkupUnion:
             """
             Створити клавіатуру для прийняття завдання.
 
-            :param task_id: ID завдання, яке потрібно прийняти з БД
+            :param task_id: ID завдання, яке потрібно прийняти з БД. не може бути None
 
             Returns:
                 ReplyMarkupUnion: Клавіатура для прийняття завдання.
             """
 
-            kb = InlineKeyboardBuilder()
-            kb.add(
-                InlineKeyboardButton(
-                    text="Прийняти завдання",
-                    callback_data=f"accept_task:{task_id}",
-                )
-            )
-            return kb.as_markup()
+            return create_accept_task_kb(task_id)
 
         @tool
         async def create_reply_markup_for_show_task(task_id: int) -> ReplyMarkupUnion:
@@ -129,14 +240,7 @@ class UserTools(BaseTools):
                 ReplyMarkupUnion: Клавіатура для перегляду завдання.
             """
 
-            kb = InlineKeyboardBuilder()
-            kb.add(
-                InlineKeyboardButton(
-                    text="Переглянути завдання",
-                    callback_data=f"show_task:{task_id}",
-                )
-            )
-            return kb.as_markup()
+            return create_show_task_kb(task_id)
 
         @tool
         async def create_reply_markup_for_done_task(task_id: int) -> ReplyMarkupUnion:
@@ -149,17 +253,10 @@ class UserTools(BaseTools):
                 ReplyMarkupUnion: Клавіатура для завершення завдання.
             """
 
-            kb = InlineKeyboardBuilder()
-            kb.add(
-                InlineKeyboardButton(
-                    text="Завершити завдання",
-                    callback_data=f"done_task:{task_id}",
-                )
-            )
-            return kb.as_markup()
+            return create_end_task_kb(task_id)
 
         @tool
-        async def send_message(
+        async def send_message_func(
             chat_id: int, text: str, reply_markup: Optional[ReplyMarkupUnion] = None
         ) -> Message:
             """
@@ -172,16 +269,28 @@ class UserTools(BaseTools):
             Returns:
                 Message: Відправлене повідомлення.
             """
-            msg = await self.bot.send_message(
-                chat_id=chat_id, text=text, reply_markup=reply_markup
+            msg = await send_message(
+                bot=self.bot, chat_id=chat_id, text=text, reply_markup=reply_markup
             )
             return msg
 
-        return [
+        all_tools = [
             get_all_users_from_db,
             get_user_by_id,
             create_reply_markup_for_accept_task,
             create_reply_markup_for_show_task,
             create_reply_markup_for_done_task,
-            send_message,
+            send_message_func,
+            get_user_hierarchy,
         ]
+        analytics_tools = [
+            get_all_users_from_db,
+            get_user_by_id,
+            get_user_hierarchy,
+            create_reply_markup_for_show_task,
+            send_message_func,
+        ]
+        return UserToolsData(
+            all_tools=all_tools,
+            analytics_tools=analytics_tools,
+        )

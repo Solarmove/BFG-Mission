@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from aiogram import Bot
 from aiogram.types import Message
@@ -16,6 +17,8 @@ from ...utils.misc import voice_to_text
 from ...utils.unitofwork import UnitOfWork
 from . import states
 
+logger = logging.getLogger(__name__)
+
 
 async def invoke_ai_agent(
     manager: BaseDialogManager, ai_agent: AIAgent, message_text: str
@@ -23,15 +26,21 @@ async def invoke_ai_agent(
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""
-    async for chunk in llm_response_generator:
-        if chunk is None:
-            continue
-        result_text += chunk
-        buffer += result_text
-        if len(result_text) % 10 == 0:
+    try:
+        async for chunk, process_chunk in llm_response_generator:
+            if process_chunk:
+                await manager.update({"answer": process_chunk})
+                continue
+            if chunk is None:
+                continue
+            result_text += chunk
+            buffer += result_text
+            # if len(result_text) % 10 == 0:
             await manager.update({"answer": result_text})
-    if buffer:
-        await manager.update({"answer": result_text})
+        if buffer:
+            await manager.update({"answer": result_text})
+    except Exception as e:
+        logger.info("Error while invoking AI agent: %s", e)
 
 
 async def on_send_first_message_query(

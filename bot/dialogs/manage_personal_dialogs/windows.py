@@ -111,7 +111,6 @@ show_work_schedule_window = Window(
     I18nFormat("show-work-schedule-text"),
     DynamicMedia(selector="work_schedule_csv_file"),
     Back(I18nFormat("back-btn")),
-    Cancel(I18nFormat("close-btn")),
     state=states.ShowSchedule.show_schedule,
     getter=getters.work_schedule_getter,
 )

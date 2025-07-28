@@ -3,13 +3,15 @@ from langchain_core.tools import tool
 
 from bot.entities.other import ScheduleCreationResult
 from bot.entities.users import WorkScheduleCreate, WorkScheduleRead, WorkScheduleUpdate
+from bot.services.ai_agent.entities import WorkScheduleToolsData
 from .base import BaseTools
+from ..entities import WorkScheduleToolsData
 
 
 class WorkScheduleTools(BaseTools):
     """Інструменти для роботи з робочими графіками."""
 
-    def get_tools(self) -> list:
+    def get_tools(self) -> WorkScheduleToolsData:
         @tool
         async def get_all_work_schedulers_from_db(
             date_from: datetime.datetime | None = None,
@@ -138,10 +140,18 @@ class WorkScheduleTools(BaseTools):
                     existing_count=schedules_exists,
                 )
 
-        return [
+        all_tools = [
             get_all_work_schedulers_from_db,
             get_work_schedule_in_user,
             update_work_schedule,
             delete_work_schedule,
             create_work_schedule,
         ]
+        analytics_tools = [
+            get_all_work_schedulers_from_db,
+            get_work_schedule_in_user,
+        ]
+        return WorkScheduleToolsData(
+            all_tools=all_tools,
+            analytics_tools=analytics_tools,
+        )

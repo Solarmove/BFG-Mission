@@ -3,6 +3,7 @@ from langchain_core.tools import tool
 from bot.db.redis import redis_cache
 from bot.entities.task import TaskCategoryRead
 from .base import BaseTools
+from ..entities import CategoryToolsData
 
 
 class CategoryTools(BaseTools):
@@ -26,7 +27,7 @@ class CategoryTools(BaseTools):
                 for category in categories
             ]
 
-    def get_tools(self) -> list:
+    def get_tools(self) -> CategoryToolsData:
         @tool
         async def get_categories_from_db() -> list[TaskCategoryRead]:
             """
@@ -84,9 +85,14 @@ class CategoryTools(BaseTools):
                 await self.uow.task_categories.delete_one(id=category_id)
                 await self.uow.commit()
 
-        return [
+        all_tools = [
             get_categories_from_db,
             get_category_by_id,
             create_category,
             delete_category,
         ]
+        analytics_tools = [
+            get_categories_from_db,
+            get_category_by_id,
+        ]
+        return CategoryToolsData(all_tools=all_tools, analytics_tools=analytics_tools)

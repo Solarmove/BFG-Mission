@@ -4,6 +4,7 @@ from aiogram_dialog.widgets.kbd import (
 )
 from magic_filter import F
 
+from ..analytics_menu_dialogs.states import AnalyticsWithAI
 from ...i18n.utils.i18n_format import I18nFormat
 from ..ai_agent_menu_dialogs.states import AIAgentMenu
 from ..categories_menu_dialogs.states import CategoryMenu
@@ -37,5 +38,10 @@ def main_menu_keyboard():
                 when=F["hierarchy_level"] == 1,
             ),
             width=2,
+        ),
+        Start(
+            I18nFormat("analytics-btn"),
+            id="analytics",
+            state=AnalyticsWithAI.enter_query,  # Assuming analytics uses the same state as AI agent
         ),
     )

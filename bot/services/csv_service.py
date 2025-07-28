@@ -1,15 +1,20 @@
 import calendar
 import csv
 import datetime
+import locale
+import logging
 import os
 import re
 from io import StringIO
 from pathlib import Path
-from typing import List, Dict, Any
+from pprint import pprint
+from typing import Any, Dict, List
 
 from bot.db.models.models import User, WorkSchedule
 from bot.exceptions.user_exceptions import InvalidCSVFile
 from bot.utils.unitofwork import UnitOfWork
+
+locale.setlocale(locale.LC_TIME, "C")  # Английская локаль
 
 
 def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> str:
@@ -28,6 +33,7 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
         str: Path to the saved CSV file
     """
     # Get the number of days in the month
+    # pprint(user_data)
     num_days = calendar.monthrange(year, month)[1]
 
     # Create headers
@@ -48,12 +54,12 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
 
         # Create a dictionary mapping day of month to schedule
         day_to_schedule = {}
+
         for schedule in schedules:
             day = schedule.date.day
             day_to_schedule[day] = (
                 f"{schedule.start_time.strftime('%H:%M')}-{schedule.end_time.strftime('%H:%M')}"
             )
-
         # Prepare row data
         row_data = [
             data.full_name or data.full_name_tg,
@@ -68,6 +74,7 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
             row_data.append(schedule_text)
 
         # Write the row
+        pprint(row_data)
         writer.writerow(row_data)
 
     # Convert to bytes
@@ -76,7 +83,7 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
     )  # Use UTF-8 with BOM for Excel compatibility
 
     # Create directory for excel files if it doesn't exist
-    excel_dir = Path("excel_files")
+    excel_dir = Path("csv_files")
     excel_dir.mkdir(exist_ok=True)
 
     # Generate a unique filename based on month, year and timestamp
@@ -121,7 +128,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
 
     # Read the CSV file
     with open(file_path, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
+        reader = csv.reader(f, delimiter=";")
         rows = list(reader)
 
     if len(rows) < 2:  # At least headers and one data row
@@ -205,10 +212,12 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         else:
             end_date = datetime.datetime(year, month + 1, 1)
 
-        existing_schedules = await uow.work_schedules.find_all(user_id=user.id)
-        existing_schedules = [
-            s for s in existing_schedules if start_date <= s.date < end_date
-        ]
+        existing_schedules = (
+            await uow.work_schedules.get_all_work_schedules_for_date_to_date(
+                date_from=start_date, date_to=end_date, user_id=user.id
+            )
+        )
+        existing_schedules = [s for s in existing_schedules]
 
         # Create a dictionary of existing schedules by day
         existing_by_day = {s.date.day: s for s in existing_schedules}
@@ -219,6 +228,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         # Process each day's schedule
         for i, day in enumerate(days):
             if i + 4 >= len(row):  # Skip if row doesn't have data for this day
+                logging.info(f"Row {row} does not have data for day {day}. Skipping.")
                 continue
 
             schedule_text = row[i + 4].strip()
@@ -228,7 +238,10 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
             if schedule_text.lower() == "вихідний":
                 if day in existing_by_day:
                     # Delete existing schedule for this day
-                    await uow.session.delete(existing_by_day[day])
+                    logging.info()
+                    existing_scheduler_model = existing_by_day[day]
+                    await uow.work_schedules.delete_one(existing_scheduler_model.id)
+                    await uow.commit()
                     stats["schedules_deleted"] += 1
                 continue
 
@@ -274,5 +287,5 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
 
         # Commit all changes
         await uow.commit()
-
+    pprint(stats)
     return stats

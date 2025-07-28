@@ -73,9 +73,10 @@ async def year_getter(
 async def excel_file_getter(
     dialog_manager: DialogManager, uow: UnitOfWork, event_from_user: User, **kwargs
 ):
-    users_list = await uow.users.get_all_users_with_schedule()
     current_month = dialog_manager.dialog_data["month"]
     current_year = dialog_manager.dialog_data["year"]
+    users_list = await uow.users.get_all_users_with_schedule()
+    print(users_list)
     template_csv_file_path = create_work_schedule_csv(
         users_list, month=current_month, year=current_year
     )

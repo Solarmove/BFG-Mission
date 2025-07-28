@@ -11,7 +11,7 @@ from aiogram_dialog.widgets.kbd import (
     CurrentPage,
     NextPage,
 )  # noqa: F401
-from aiogram_dialog.widgets.text import Format, Const
+from aiogram_dialog.widgets.text import Format, Const, Text
 from magic_filter import F
 
 from . import on_clicks, states  # noqa: F401
@@ -75,7 +75,10 @@ def action_with_task_keyboard():
             I18nFormat("cancel-task-btn"),
             id="cancel_task",
             on_click=on_clicks.on_cancel_task_click,
-            when=~F["am_i_executor"] & F["task_status"].not_in([TaskStatus.CANCELED]),
+            when=~F["am_i_executor"]
+            & F["task_status"].not_in(
+                [TaskStatus.CANCELED, TaskStatus.COMPLETED, TaskStatus.OVERDUE]
+            ),
         ),
         Button(
             I18nFormat("confirm-btn"),
@@ -106,7 +109,8 @@ def action_with_task_keyboard():
     )
 
 
-def scroll_keyboard(scroll_id: str):
+def scroll_keyboard(scroll_id: str, custom_text: Text|None = None):
+    current_page_text = custom_text or Format("{current_page1}/{pages}")
     return Row(
         PrevPage(
             text=Const("«"),
@@ -114,7 +118,7 @@ def scroll_keyboard(scroll_id: str):
             when=F["pages"] > 1,
         ),
         CurrentPage(
-            text=Format("{current_page1}/{pages}"),
+            text=current_page_text,
             scroll=scroll_id,
             when=F["pages"] > 1,
         ),
@@ -123,5 +127,4 @@ def scroll_keyboard(scroll_id: str):
             scroll=scroll_id,
             when=F["pages"] > 1,
         ),
-        
     )

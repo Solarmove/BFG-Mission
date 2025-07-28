@@ -2,10 +2,11 @@ import logging
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
+from aiogram_i18n.cores import FluentRuntimeCore
 
 from bot.utils.unitofwork import UnitOfWork
 from configreader import config, RedisConfig
-
+from scheduler.func import send_notification
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +25,9 @@ async def startup(ctx):
         token=config.bot_config.token,
         default=DefaultBotProperties(parse_mode=config.bot_config.parse_mode),
     )
+    core = FluentRuntimeCore(path=config.path_to_locales)
+    ctx["core"] = core
+    await core.startup()
 
 
 async def shutdown(ctx):
@@ -35,6 +39,6 @@ class WorkerSettings:
     redis_settings = RedisConfig.pool_settings
     on_startup = startup
     on_shutdown = shutdown
-    functions = []
-    cron_jobs = []
+    functions = [send_notification]
+
     allow_abort_jobs = True

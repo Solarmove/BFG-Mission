@@ -15,6 +15,7 @@ from ...db.models.models import Task
 from ...entities.shared import TaskReadExtended
 from ...services.mailing_service import send_message
 from ...utils.enum import TaskStatus
+from ...utils.misc import humanize_timedelta
 from ...utils.unitofwork import UnitOfWork
 from . import states
 
@@ -111,15 +112,24 @@ async def on_cancel_task_click(
 async def on_complete_task_click(
     call: CallbackQuery, widget: Button, manager: DialogManager
 ):
+    start_data = manager.start_data or {}
     await manager.start(
         states.CompleteTask.enter_report_text,
         data={
-            "task_id": manager.dialog_data.get("task_id"),
-            "control_point_id": manager.dialog_data.get("control_point_id", None),
-            "photo_required": manager.dialog_data["photo_required"],
-            "video_required": manager.dialog_data["video_required"],
-            "file_required": manager.dialog_data["file_required"],
-            "title": manager.dialog_data.get("title"),
+            "task_id": manager.dialog_data.get("task_id", start_data.get("task_id")),
+            "control_point_id": manager.dialog_data.get(
+                "control_point_id", start_data.get("control_point_id")
+            ),
+            "photo_required": manager.dialog_data.get(
+                "photo_required", start_data.get("photo_required")
+            ),
+            "video_required": manager.dialog_data.get(
+                "video_required", start_data.get("video_required")
+            ),
+            "file_required": manager.dialog_data.get(
+                "file_required", start_data.get("file_required")
+            ),
+            "title": manager.dialog_data.get("title", start_data.get("title")),
         },
     )
 
@@ -244,7 +254,9 @@ async def on_confirm_complete_task_click(
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
     control_point_id = manager.start_data.get("control_point_id")
-    task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
+    task_model_dict: dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
+    print(task_id)
+    print(task_model_dict)
     task_model = TaskReadExtended.model_validate(task_model_dict)
     report_text = manager.dialog_data.get("report_text", "")
     report_media_list = manager.dialog_data.get("report_media_list", [])
@@ -316,7 +328,7 @@ async def on_confirm_complete_task_click(
             task_title=task_model.title,
             executor_full_name=task_model.executor.full_name
             or task_model.executor.full_name_tg,
-            overdue_time=overdue_time,
+            overdue_time=humanize_timedelta(overdue_time),
             report_text=report_text,
         )
     )
@@ -335,7 +347,7 @@ async def on_confirm_complete_task_click(
         else i18n.get(
             "task-completed-overdue-alert",
             task_title=task_model.title,
-            overdue_time=overdue_time,
+            overdue_time=humanize_timedelta(overdue_time),
         )
     )
     await call.answer(text_for_executor, show_alert=True)

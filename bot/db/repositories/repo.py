@@ -60,12 +60,14 @@ class UserRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def get_all_users_with_schedule(self):
+    async def get_all_users_with_schedule(
+        self,
+    ):
         stmt = select(self.model).options(
             selectinload(self.model.work_schedules), joinedload(self.model.position)
         )
         res = await self.session.execute(stmt)
-        return res.scalars().all()
+        return res.unique().scalars().all()
 
     @redis_cache(expiration=5)
     async def user_exist(self, user_id: int, update_cache: bool | None = None) -> bool:
@@ -120,7 +122,10 @@ class WorkScheduleRepo(SQLAlchemyRepository):
     model = WorkSchedule
 
     async def get_all_work_schedules_for_date_to_date(
-        self, date_from: datetime.date, date_to: datetime.date
+        self,
+        date_from: datetime.date,
+        date_to: datetime.date,
+        user_id: int | None = None,
     ):
         """Get all work schedules for a given date range."""
         stmt = (
@@ -128,6 +133,8 @@ class WorkScheduleRepo(SQLAlchemyRepository):
             .where(self.model.date >= date_from, self.model.date <= date_to)
             .order_by(self.model.date)
         )
+        if user_id is not None:
+            stmt = stmt.where(self.model.user_id == user_id)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
@@ -154,7 +161,7 @@ class TaskRepo(SQLAlchemyRepository):
     model = Task
 
     @redis_cache(expiration=30)
-    async def get_task_by_id(self, task_id: int):
+    async def get_task_by_id(self, task_id: int, update_cache: bool | None = None):
         """Get a task by its ID."""
         stmt = (
             select(self.model)
@@ -217,8 +224,8 @@ class TaskRepo(SQLAlchemyRepository):
     ):
         """Get all tasks with optional filters."""
         stmt = select(self.model).options(
-            joinedload(self.model.creator),
-            joinedload(self.model.executor),
+            joinedload(self.model.creator).joinedload(User.position),
+            joinedload(self.model.executor).joinedload(User.position),
             joinedload(self.model.category),
             selectinload(self.model.control_points),
             joinedload(self.model.reports),
@@ -238,7 +245,7 @@ class TaskRepo(SQLAlchemyRepository):
             stmt = stmt.where(self.model.end_datetime <= end_datetime)
         stmt = stmt.order_by(self.model.created_at.desc())
         res = await self.session.execute(stmt)
-        return res.scalars().all()
+        return res.unique().scalars().all()
 
     async def get_task_in_work(self, user_id: int):
         """Get the current task for a user."""
@@ -269,3 +276,49 @@ class TaskReportContentRepo(SQLAlchemyRepository):
 
 class PositionRepo(SQLAlchemyRepository):
     model = Positions
+
+
+class AnalyticsRepo(SQLAlchemyRepository):
+    """
+    Repository for analytics-related operations.
+    This is a placeholder for future analytics-related methods.
+    """
+
+    model = Task
+
+    async def get_task_by_condition(
+        self,
+        creator_id: int | None = None,
+        executor_id: int | None = None,
+        status: TaskStatus | None = None,
+        start_datetime: datetime.datetime | None = None,
+        end_datetime: datetime.datetime | None = None,
+    ):
+        """
+        Get tasks based on various conditions.
+        This method can be extended to include more complex analytics queries.
+        """
+        stmt = select(self.model).options(
+            joinedload(self.model.creator).joinedload(User.position),
+            joinedload(self.model.executor).joinedload(User.position),
+            joinedload(self.model.category),
+            selectinload(self.model.control_points),
+            joinedload(self.model.reports),
+        )
+        if creator_id is not None:
+            stmt = stmt.where(self.model.creator_id == creator_id)
+        if executor_id is not None:
+            stmt = stmt.where(self.model.executor_id == executor_id)
+        if status is not None:
+            stmt = stmt.where(self.model.status == status)
+        if start_datetime is not None:
+            stmt = stmt.where(self.model.start_datetime >= start_datetime)
+        if end_datetime is not None:
+            stmt = stmt.where(self.model.end_datetime <= end_datetime)
+        res = await self.session.execute(stmt)
+        result = res.scalars().all()
+        return [
+            TaskReadExtended.model_validate(task, from_attributes=True).model_dump()
+            for task in result
+        ]
+

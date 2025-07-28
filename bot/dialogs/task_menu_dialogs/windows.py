@@ -33,7 +33,7 @@ show_task_window = Window(
         items="report_media_list",
         when="report_media_list",
     ),
-    keyboards.scroll_keyboard("report_media_scroll"),
+    keyboards.scroll_keyboard("report_media_scroll", Format("{current_page1}/{pages}")),
     keyboards.action_with_task_keyboard(),
     Back(I18nFormat("back-btn")),
     state=states.MyTasks.show_task,
