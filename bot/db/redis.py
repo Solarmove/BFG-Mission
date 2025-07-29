@@ -12,7 +12,7 @@ redis = Redis(
     host=config.db_config.redis_host,
     port=config.db_config.redis_port,
     db=config.db_config.redis_db,
-    # password=config.db_config.redis_password,
+    password=config.db_config.redis_password,
 )
 
 logger = logging.getLogger(__name__)
