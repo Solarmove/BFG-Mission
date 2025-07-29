@@ -43,8 +43,6 @@ class LogService:
         self.warning_thread_id = config.bot_config.warning_logs_channel_thread_id
         self.critical_thread_id = config.bot_config.critical_logs_channel_thread_id
 
-
-
     @staticmethod
     def _format_message(
         level: LogLevel, message: str, extra_info: Optional[dict] = None
@@ -88,7 +86,11 @@ class LogService:
             raise ValueError(f"Unknown log level: {level}")
 
     async def _send_log(
-        self, level: LogLevel, message: str, extra_info: Optional[dict] = None
+        self,
+        level: LogLevel,
+        message: str,
+        extra_info: Optional[dict] = None,
+        disable_notification: bool = False,
     ) -> bool:
         """
         Send a log message to the configured channel.
@@ -106,6 +108,7 @@ class LogService:
                 text=formatted_message,
                 message_thread_id=self.get_thread_id(level),
                 parse_mode="HTML",
+                disable_notification=disable_notification,
             )
             return True
 
@@ -124,7 +127,9 @@ class LogService:
         :param extra_info: Optional additional information.
         :return: True if message was sent successfully, False otherwise.
         """
-        return await self._send_log(LogLevel.DEBUG, message, extra_info)
+        return await self._send_log(
+            LogLevel.DEBUG, message, extra_info, disable_notification=True
+        )
 
     async def info(self, message: str, extra_info: Optional[dict] = None) -> bool:
         """
@@ -134,7 +139,9 @@ class LogService:
         :param extra_info: Optional additional information.
         :return: True if message was sent successfully, False otherwise.
         """
-        return await self._send_log(LogLevel.INFO, message, extra_info)
+        return await self._send_log(
+            LogLevel.INFO, message, extra_info, disable_notification=True
+        )
 
     async def warning(self, message: str, extra_info: Optional[dict] = None) -> bool:
         """

@@ -39,7 +39,6 @@ async def invoke_ai_agent(
                 continue
             result_text += chunk
             buffer += result_text
-            # if len(result_text) % 10 == 0:
             await manager.update({"answer": result_text})
         if buffer:
             await manager.update({"answer": result_text})
