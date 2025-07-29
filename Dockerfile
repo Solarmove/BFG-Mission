@@ -19,6 +19,4 @@ ADD . /app
 WORKDIR /app
 RUN uv sync
 
-EXPOSE 8000
-
 CMD ["uv", "run", "python", "-m", "bot"]

@@ -18,5 +18,5 @@ class DbSessionMiddleware(BaseMiddleware):
     ) -> Any:
         uow = UnitOfWork()
         async with uow:
-            data['uow'] = uow
+            data["uow"] = uow
             return await handler(event, data)

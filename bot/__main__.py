@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
@@ -8,6 +7,8 @@ from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisEventIsolation, RedisStorage
 from aiogram_dialog import setup_dialogs
 from aiogram_i18n.cores import FluentRuntimeCore
+from arq import create_pool
+from langchain_openai import ChatOpenAI
 
 from bot.dialogs import dialog_routers
 from bot.db.base import create_all
@@ -16,9 +17,12 @@ from bot.handlers import routers_list
 from bot.i18n.utils.i18n_format import make_i18n_middleware
 from bot.middleware.db import DbSessionMiddleware
 from bot.middleware.i18n_dialog import RedisI18nMiddleware
+from bot.middleware.log_middleware import LogMiddleware
+from bot.services.startup import on_startup
 
 from bot.utils.set_bot_commands import set_default_commands
-from configreader import config
+from configreader import config, RedisConfig
+
 
 # Logging
 logging.basicConfig(
@@ -49,15 +53,27 @@ core = FluentRuntimeCore(path=config.path_to_locales)
 i18n_middleware = RedisI18nMiddleware(core=core, redis=redis)
 i18n_dialog_middleware = make_i18n_middleware(config.path_to_locales)
 
+llm = ChatOpenAI(
+    # model="gpt-3.5-turbo",
+    model="gpt-4.1",
+    temperature=0.1,
+    # max_tokens=1000,
+    api_key=config.openai_api_key,
+    max_retries=3,
+)
+
 
 def include_middlewares():
     dp.update.middleware(i18n_middleware)
     dp.update.middleware(i18n_dialog_middleware)
     dp.update.middleware(RedisI18nMiddleware(core=core, redis=redis))
     dp.update.middleware(DbSessionMiddleware())
+    dp.update.middleware(LogMiddleware())
 
 
 async def main():
+    redis_pool = await create_pool(RedisConfig.pool_settings)
+
     await bot.delete_webhook(drop_pending_updates=True)
     await set_default_commands(bot)
     include_middlewares()
@@ -67,7 +83,10 @@ async def main():
     setup_dialogs(dp)
     dp.include_router(router)
     dp["redis"] = redis
-    # await create_all()
+    dp["arq"] = redis_pool
+    dp["llm"] = llm
+    await create_all()
+    await on_startup()
     await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
 
