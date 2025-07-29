@@ -66,18 +66,19 @@ async def on_send_first_message_query(
     channel_log: LogService = manager.middleware_data["channel_log"]
     task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
-    prompt = get_prompt(
-        user_hierarchy_level, is_analytics=start_data.get("prompt") == "analytics"
-    )
+    is_analytics = start_data.get("prompt") == "analytics"
+    prompt = get_prompt(user_hierarchy_level, is_analytics=is_analytics)
     ai_agent = AIAgent(
         model=llm,
-        tools=task_tools.get_tools(),
+        tools=task_tools.get_tools()
+        if not is_analytics
+        else task_tools.get_tools_for_analytics(),
         prompt=prompt,
         redis_client=redis,
         chat_id=message.from_user.id,
         log_service=channel_log,
     )
-    await ai_agent.clear_history()  # TODO: запитати чи потрібно очищати історію
+    await ai_agent.clear_history()
     return await on_send_query(message, widget, manager)
 
 
@@ -96,18 +97,18 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     channel_log: LogService = manager.middleware_data["channel_log"]
     task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
-    prompt = get_prompt(
-        user_hierarchy_level, is_analytics=start_data.get("prompt") == "analytics"
-    )
+    is_analytics = start_data.get("prompt") == "analytics"
+    prompt = get_prompt(user_hierarchy_level, is_analytics=is_analytics)
     ai_agent = AIAgent(
         model=llm,
-        tools=task_tools.get_tools(),
+        tools=task_tools.get_tools()
+        if not is_analytics
+        else task_tools.get_tools_for_analytics(),
         prompt=prompt,
         redis_client=redis,
         chat_id=message.from_user.id,
         log_service=channel_log,
     )
-
     if message.text:
         message_text = message.text
     elif message.voice:
