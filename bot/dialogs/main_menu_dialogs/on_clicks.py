@@ -22,7 +22,8 @@ async def on_enter_full_name_click(
     position_model: Positions = await uow.positions.find_one(
         id=manager.start_data.get("position_id")
     )
-    if position_model.hierarchy_level == 1:
+    user_exists = await uow.users.user_exist(message.from_user.id, update_cache=True)
+    if user_exists:
         await uow.users.edit_one(
             id=message.from_user.id, data=dict(full_name=full_name)
         )

@@ -4,6 +4,8 @@ manage-personal-menu-text = Управління персоналом
 back-btn = Назад
 select-position-text = Виберіть посаду
 show-reg-link-text = Ваше посилання для реєстрації
+
+    <code>{$reg_link}</code>
 send-reg-link-btn = Надіслати посилання
 manage-work-schedule-text = Управління робочим графіком
     Виберіть дію:
