@@ -29,7 +29,7 @@ class LogService:
     to a configured Telegram channel with proper formatting and error handling.
     """
 
-    def __init__(self, bot: Bot = Bot(config.bot_config.bot_token)) -> None:
+    def __init__(self, bot: Bot = Bot(config.bot_config.token)) -> None:
         """
         Initialize the log service.
 
