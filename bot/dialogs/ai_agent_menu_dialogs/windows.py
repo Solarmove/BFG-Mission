@@ -17,12 +17,10 @@ from . import getters, on_clicks, states
 send_query_window = Window(
     Case(
         {
-            1: I18nFormat("ai-agent-send-query-text-1"),
-            2: I18nFormat("ai-agent-send-query-text-2"),
-            3: I18nFormat("ai-agent-send-query-text-3"),
-            4: I18nFormat("ai-agent-send-query-text-4"),
+            'analytics': I18nFormat("ai-agent-analytics-text"),
+            'helper': I18nFormat("ai-agent-helper-text"),
         },
-        selector="hierarchy_level",
+        selector="prompt",
     ),
     MessageInput(
         func=on_clicks.on_send_first_message_query,

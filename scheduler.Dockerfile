@@ -19,4 +19,4 @@ ADD . /app
 WORKDIR /app
 RUN uv sync
 
-CMD ["uv", "run", "python", "-m", "bot"]
+CMD ["uv", "run", "arq", "scheduler.main.WorkerSettings"]

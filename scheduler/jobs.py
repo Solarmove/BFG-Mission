@@ -6,6 +6,7 @@ from arq import ArqRedis
 from arq.jobs import Job
 
 from bot.db.redis import redis
+from bot.services.log_service import LogService
 
 logger = logging.getLogger(__name__)
 
@@ -50,21 +51,42 @@ async def create_notification_job(
     job_id = (
         f"notification_{notification_for}_{notification_subject}_{user_id}_{task_id}"
     )
+    log_service = LogService()
     if update_notification:
         existing_job = Job(job_id=job_id, redis=redis)
         result = await existing_job.abort()
         if not result:
             logger.warning(
-                '"Failed to update notification job, it may not exist or is already completed.'
+                "Failed to update notification job, it may not exist or is already completed."
             )
-
-    await arq.enqueue_job(
-        "send_notification",
-        _job_id=job_id,
-        _defer_until=_defer_until,
-        _defer_by=_defer_by,
-        user_id=user_id,
-        task_id=task_id,
-        notification_for=notification_for,
-        notification_subject=notification_subject,
-    )
+            await log_service.warning(
+                "Failed to update notification job, it may not exist or is already completed.",
+                extra_info={"JOB_ID": job_id},
+            )
+    try:
+        await arq.enqueue_job(
+            "send_notification",
+            _job_id=job_id,
+            _defer_until=_defer_until,
+            _defer_by=_defer_by,
+            user_id=user_id,
+            task_id=task_id,
+            notification_for=notification_for,
+            notification_subject=notification_subject,
+        )
+    except Exception as e:
+        logger.error(
+            f"Failed to create notification job {job_id} for user {user_id} and task {task_id}: {e}"
+        )
+        await log_service.log_exception(
+            e,
+            context="Створення нотифікаії",
+            extra_info={
+                "JOB_ID": job_id,
+                "USER_ID": user_id,
+                "TASK_ID": task_id,
+                "NOTIFICATION_FOR": notification_for,
+                "NOTIFICATION_SUBJECT": notification_subject,
+            },
+        )
+        raise e

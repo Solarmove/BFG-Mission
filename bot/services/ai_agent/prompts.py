@@ -670,6 +670,16 @@ ANALYTICS_LLM_AGENT_PROMPT_OTHER = """
 """
 
 
+def get_prompt(hierarchy_level: int, is_analytics: bool = False):
+    """
+    Returns the appropriate prompt for the AI agent based on the hierarchy level and context.
+    """
+    if is_analytics:
+        return get_analytic_prompt_from_hierarchy_level(hierarchy_level)
+    else:
+        return get_prompt_from_hierarchy_level(hierarchy_level)
+
+
 def get_prompt_from_hierarchy_level(hierarchy_level: int):
     """
     Returns the prompt for the AI agent based on the hierarchy level.
