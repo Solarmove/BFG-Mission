@@ -148,5 +148,5 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         return
     await manager.switch_to(states.AIAgentMenu.answer)
     asyncio.create_task(
-        common_run(manager.bg(), ai_agent, message_text, channel_log)
+        invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
     )
