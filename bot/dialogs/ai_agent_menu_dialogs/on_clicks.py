@@ -27,12 +27,12 @@ async def invoke_ai_agent(
     ai_agent: AIAgent,
     message_text: str,
     log_service: LogService,
-    bot: Bot,
 ):
+    loading_task = asyncio.create_task(loading_text_decoration(manager.bg()))
+
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""
-    loading_task = asyncio.create_task(loading_text_decoration(manager.bg()))
     try:
         async for chunk, process_chunk in llm_response_generator:
             if process_chunk:
@@ -136,5 +136,5 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         return
     await manager.switch_to(states.AIAgentMenu.answer)
     asyncio.create_task(
-        invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log, bot)
+        invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
     )
