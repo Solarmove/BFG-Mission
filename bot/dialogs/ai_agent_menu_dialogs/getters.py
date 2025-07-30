@@ -20,7 +20,7 @@ async def ai_agent_getter(
     return {
         "hierarchy_level": hierarchy_level,
         "full_name": my_full_name or event_from_user.full_name,
-        'prompt': dialog_manager.start_data.get('prompt')
+        "prompt": dialog_manager.start_data.get("prompt"),
     }
 
 
@@ -34,5 +34,12 @@ async def ai_agent_answer_getter(
     Getter function for AI Agent answer dialog.
     Retrieves the answer from the user's state.
     """
-    answer = dialog_manager.dialog_data["answer"]
-    return {"answer": answer, "answer_len": len(answer)}
+    answer = dialog_manager.dialog_data.get("answer")
+    process_loading = dialog_manager.dialog_data.get(
+        "process_loading", "Опрацьовуємо відповідь..."
+    )
+    return {
+        "answer": answer,
+        "answer_len": len(answer) if answer else 0,
+        "process_loading": process_loading,
+    }
