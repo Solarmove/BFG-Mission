@@ -111,46 +111,38 @@ class AIAgent:
         )
         content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
         response_text = ""
-        have_response = False
-        tries = 0
         log_text = f"<b>Запит до AI агента</b>"
         await self.log_service.info(
             log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
         )
-        while not have_response and tries <= 15:
-            try:
-                async for chunk in self._agent_with_history.astream(
-                    input={"input": content}, config=config
-                ):
-                    if "output" not in chunk and "messages" in chunk:
-                        messages = chunk["messages"]
-                        for message in messages:
-                            if not isinstance(message, AIMessage):
-                                continue
-                            if hasattr(message, "content") and len(message.content) > 0:
-                                text = self.replace_unallowed_characters(
-                                    message.content
-                                )
-                                text += "\n\nОпрацьовуємо запит..."
-                                yield response_text, text
-                            yield None, None
+        async for chunk in self._agent_with_history.astream(
+            input={"input": content}, config=config
+        ):
+            if "output" not in chunk and "messages" in chunk:
+                messages = chunk["messages"]
+                for message in messages:
+                    if not isinstance(message, AIMessage):
+                        continue
+                    if hasattr(message, "content") and len(message.content) > 0:
+                        text = self.replace_unallowed_characters(
+                            message.content
+                        )
+                        text += "\n\nОпрацьовуємо запит..."
+                        yield response_text, text
+                    yield None, None
 
-                    if "output" in chunk:
-                        have_response = True
-                        response_text += self.replace_unallowed_characters(
-                            chunk["output"]
-                        )
-                        log_text = f"<b>Відповідь AI агента</b>"
-                        await self.log_service.info(
-                            log_text,
-                            extra_info={
-                                "Відповідь": response_text,
-                                "Chat ID": self.chat_id,
-                            },
-                        )
-                        yield response_text, None
-                    else:
-                        yield None, None
-            except RateLimitError as e:
-                logger.info(f"Rate limit exceeded: {e}")
-                await asyncio.sleep(3)
+            if "output" in chunk:
+                response_text += self.replace_unallowed_characters(
+                    chunk["output"]
+                )
+                log_text = f"<b>Відповідь AI агента</b>"
+                await self.log_service.info(
+                    log_text,
+                    extra_info={
+                        "Відповідь": response_text,
+                        "Chat ID": self.chat_id,
+                    },
+                )
+                yield response_text, None
+            else:
+                yield None, None
