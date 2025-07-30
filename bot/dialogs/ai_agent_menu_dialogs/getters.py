@@ -40,6 +40,6 @@ async def ai_agent_answer_getter(
     )
     return {
         "answer": answer,
-        "answer_len": len(answer),
+        "answer_len": len(answer) if answer else 0,
         "process_loading": process_loading,
     }
