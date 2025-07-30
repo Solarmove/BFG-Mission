@@ -108,7 +108,6 @@ async def work_schedule_getter(
     users = await uow.users.get_all_users_with_schedule()
     path_to_csv_file = create_work_schedule_csv(users, month=month, year=year)
 
-    locale.setlocale(locale.LC_TIME, ("uk_UA"))
     month_name = calendar.month_name[month].capitalize()
 
     return {

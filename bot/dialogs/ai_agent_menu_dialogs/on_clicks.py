@@ -49,6 +49,7 @@ async def invoke_ai_agent(
             context="AI agent. Загальний",
             extra_info={"Запит": message_text, "Помилка": str(e)},
         )
+        raise
 
 
 async def on_send_first_message_query(
