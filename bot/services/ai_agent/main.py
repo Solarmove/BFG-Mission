@@ -21,9 +21,11 @@ from redis.asyncio import Redis
 from bot.services.ai_agent.utils.redis_chat_history import RedisChatMessageHistory
 from bot.services.log_service import LogService
 from bot.utils.consts import unallowed_characters
-
-# example of using OpenAI's GPT-4o model
-# llm = ChatOpenAI(model="gpt-4o", temperature=0.2, max_tokens=4096)
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 langchain.debug = False  # Еще более детальный вывод
 logger = logging.getLogger(__name__)
@@ -105,6 +107,7 @@ class AIAgent:
         )
         return result["output"]
 
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     async def stream_response(self, content: str):
         config = RunnableConfig(
             configurable={"session_id": str(self.chat_id or "default")}
@@ -124,17 +127,13 @@ class AIAgent:
                     if not isinstance(message, AIMessage):
                         continue
                     if hasattr(message, "content") and len(message.content) > 0:
-                        text = self.replace_unallowed_characters(
-                            message.content
-                        )
+                        text = self.replace_unallowed_characters(message.content)
                         text += "\n\nОпрацьовуємо запит..."
                         yield response_text, text
                     yield None, None
 
             if "output" in chunk:
-                response_text += self.replace_unallowed_characters(
-                    chunk["output"]
-                )
+                response_text += self.replace_unallowed_characters(chunk["output"])
                 log_text = f"<b>Відповідь AI агента</b>"
                 await self.log_service.info(
                     log_text,
