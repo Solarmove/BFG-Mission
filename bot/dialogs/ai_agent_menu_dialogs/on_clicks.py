@@ -150,3 +150,4 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     asyncio.create_task(
         invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
     )
+    loading_task = asyncio.create_task(loading_text_decoration(manager))
