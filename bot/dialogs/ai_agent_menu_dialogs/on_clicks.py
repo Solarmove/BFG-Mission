@@ -26,7 +26,7 @@ from . import states
 logger = logging.getLogger(__name__)
 
 
-@backoff.on_exception(backoff.expo, openai.RateLimitError)
+# @backoff.on_exception(backoff.expo, openai.RateLimitError)
 async def invoke_ai_agent(
     manager: BaseDialogManager,
     ai_agent: AIAgent,
