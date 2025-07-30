@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+import backoff
+import openai
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram_dialog import BaseDialogManager, DialogManager
@@ -54,6 +56,7 @@ async def invoke_ai_agent(
             context="AI agent. Загальний",
             extra_info={"Запит": message_text, "Помилка": str(e)},
         )
+
         await manager.update(
             {"answer": "Виникла помилка при обробці запиту. Спробуйте ще раз."}
         )

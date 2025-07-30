@@ -85,9 +85,7 @@ async def my_tasks_getter(
             start_datetime=datetime.datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0
             ),
-            end_datetime=datetime.datetime.now().replace(
-                hour=23, minute=59, second=59, microsecond=999999
-            ),
+
         )
     elif task_type == "all":
         my_tasks = await uow.tasks.get_all_task_simple(
