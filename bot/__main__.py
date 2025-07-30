@@ -55,7 +55,7 @@ i18n_dialog_middleware = make_i18n_middleware(config.path_to_locales)
 
 llm = ChatOpenAI(
     # model="gpt-3.5-turbo",
-    model="gpt-4.1",
+    model="o4-mini-deep-research-2025-06-26",
     temperature=0.1,
     max_tokens=1000,
     api_key=config.openai_api_key,
