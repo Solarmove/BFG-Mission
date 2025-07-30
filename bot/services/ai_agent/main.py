@@ -25,6 +25,8 @@ from tenacity import (
     retry,
     stop_after_attempt,
     wait_random_exponential,
+    AsyncRetrying,
+    retry_if_exception_type,
 )
 
 langchain.debug = False  # Еще более детальный вывод
@@ -113,35 +115,52 @@ class AIAgent:
             configurable={"session_id": str(self.chat_id or "default")}
         )
         content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
-        response_text = ""
+
         log_text = f"<b>Запит до AI агента</b>"
         await self.log_service.info(
             log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
         )
-        async for chunk in self._agent_with_history.astream(
-            input={"input": content}, config=config
-        ):
-            if "output" not in chunk and "messages" in chunk:
-                messages = chunk["messages"]
-                for message in messages:
-                    if not isinstance(message, AIMessage):
-                        continue
-                    if hasattr(message, "content") and len(message.content) > 0:
-                        text = self.replace_unallowed_characters(message.content)
-                        text += "\n\nОпрацьовуємо запит..."
-                        yield response_text, text
-                    yield None, None
+        retrying = AsyncRetrying(
+            reraise=True,
+            retry=retry_if_exception_type(RateLimitError),
+            stop=stop_after_attempt(6),
+            wait=wait_random_exponential(min=1, max=60),
+        )
+        async for attempt in retrying:
+            with attempt:
+                response_text = ""
+                async for chunk in self._agent_with_history.astream(
+                    input={"input": content}, config=config
+                ):
+                    if "output" not in chunk and "messages" in chunk:
+                        messages = chunk["messages"]
+                        for message in messages:
+                            if not isinstance(message, AIMessage):
+                                continue
+                            if hasattr(message, "content") and len(message.content) > 0:
+                                text = self.replace_unallowed_characters(
+                                    message.content
+                                )
+                                text += "\n\nОпрацьовуємо запит..."
+                                yield response_text, text
+                            yield None, None
 
-            if "output" in chunk:
-                response_text += self.replace_unallowed_characters(chunk["output"])
-                log_text = f"<b>Відповідь AI агента</b>"
-                await self.log_service.info(
-                    log_text,
-                    extra_info={
-                        "Відповідь": response_text,
-                        "Chat ID": self.chat_id,
-                    },
-                )
-                yield response_text, None
-            else:
-                yield None, None
+                    if "output" in chunk:
+                        response_text += self.replace_unallowed_characters(
+                            chunk["output"]
+                        )
+                        log_text = f"<b>Відповідь AI агента</b>"
+                        await self.log_service.info(
+                            log_text,
+                            extra_info={
+                                "Відповідь": response_text,
+                                "Chat ID": self.chat_id,
+                            },
+                        )
+                        yield response_text, None
+                    else:
+                        yield None, None
+
+            err = RuntimeError("Не вдалося отримати відповідь після 6 спроб (429)")
+            await self.log_service.log_exception(err, context="AI agent streaming")
+            raise err
