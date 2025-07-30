@@ -10,7 +10,9 @@ from aiogram_dialog.widgets.input import MessageInput
 from aiogram_i18n import I18nContext
 from arq import ArqRedis
 from langchain_openai import ChatOpenAI
+from openai import RateLimitError
 from redis.asyncio import Redis
+from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from ...services.ai_agent.main import AIAgent
 from ...services.ai_agent.prompts import get_prompt_from_hierarchy_level, get_prompt
@@ -24,42 +26,43 @@ from . import states
 logger = logging.getLogger(__name__)
 
 
+@backoff.on_exception(backoff.expo, openai.RateLimitError)
 async def invoke_ai_agent(
     manager: BaseDialogManager,
     ai_agent: AIAgent,
     message_text: str,
     log_service: LogService,
 ):
-    try:
-        llm_response_generator = ai_agent.stream_response(message_text)
-        result_text = ""
-        buffer = ""
-        current_stage = 0
-        async for chunk, process_chunk in llm_response_generator:
-            current_stage += 1
-            if current_stage >= 9:
-                current_stage = 0
-            if process_chunk:
-                await manager.update({"answer": process_chunk})
-                continue
-            if chunk is None:
-                continue
-            result_text += chunk
-            buffer += result_text
-            await manager.update({"answer": result_text})
-        if buffer:
-            await manager.update({"answer": result_text})
-    except Exception as e:
-        logger.info("Error while invoking AI agent: %s", e)
-        await log_service.log_exception(
-            e,
-            context="AI agent. Загальний",
-            extra_info={"Запит": message_text, "Помилка": str(e)},
-        )
-
-        await manager.update(
-            {"answer": "Виникла помилка при обробці запиту. Спробуйте ще раз."}
-        )
+    # try:
+    llm_response_generator = ai_agent.stream_response(message_text)
+    result_text = ""
+    buffer = ""
+    current_stage = 0
+    async for chunk, process_chunk in llm_response_generator:
+        current_stage += 1
+        if current_stage >= 9:
+            current_stage = 0
+        if process_chunk:
+            await manager.update({"answer": process_chunk})
+            continue
+        if chunk is None:
+            continue
+        result_text += chunk
+        buffer += result_text
+        await manager.update({"answer": result_text})
+    if buffer:
+        await manager.update({"answer": result_text})
+    # except Exception as e:
+    #     logger.info("Error while invoking AI agent: %s", e)
+    #     await log_service.log_exception(
+    #         e,
+    #         context="AI agent. Загальний",
+    #         extra_info={"Запит": message_text, "Помилка": str(e)},
+    #     )
+    #
+    #     await manager.update(
+    #         {"answer": "Затримуємо відповідь. Зачекайте, будь ласка, деякий час."}
+    #     )
 
 
 async def on_send_first_message_query(
