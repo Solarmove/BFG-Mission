@@ -34,12 +34,8 @@ send_query_window = Window(
 
 
 show_ai_answer_window = Window(
-    ScrollingText(
-        Format("{answer}"),
-        id="ai_answer",
-        page_size=2000,
-    ),
-    Format("{process_loading}", when=F["answer_len"] < 1),
+    ScrollingText(Format("{answer}"), id="ai_answer", page_size=2000, when=F["answer"]),
+    Format("{process_loading}", when=~F["answer"]),
     Row(
         PrevPage(
             scroll="ai_answer",

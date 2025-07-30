@@ -29,7 +29,6 @@ async def invoke_ai_agent(
     log_service: LogService,
 ):
     loading_task = asyncio.create_task(loading_text_decoration(manager.bg()))
-
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""

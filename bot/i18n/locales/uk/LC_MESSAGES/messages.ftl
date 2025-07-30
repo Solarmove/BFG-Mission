@@ -351,7 +351,7 @@ confirm-complete-task-text-control-point = Ви впевнені, що хоче�
     Цю дію не можна буде скасувати.
 control-point-already-completed = ❌ Контрольна точка вже завершена
 task-already-completed-or-canceled = ❌ Завдання вже завершено або скасовано
-ai-agent-analytics-text = 👨‍💼 Віта
+ai-agent-analytics-text = 👨‍💼 Вітаю
     Я ваш AI-помічник у Botanic Flower Group.
 
     🔧 *Що я можу для вас зробити:*
@@ -366,7 +366,7 @@ ai-agent-analytics-text = 👨‍💼 Віта
     «Яка середня тривалість виконання завдань?»
     «Хто з працівників має найвищу ефективність?»
     «Які категорії завдань виконуються найкраще?»
-ai-agent-helper-text = 👨‍💼 Вітаю, {$full_name}!
+ai-agent-helper-text = 👨‍💼 Вітаю
 
     Я ваш AI-помічник у Botanic Flower Group.
 
