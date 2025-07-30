@@ -28,7 +28,6 @@ async def invoke_ai_agent(
     message_text: str,
     log_service: LogService,
 ):
-    loading_task = asyncio.create_task(loading_text_decoration(manager.bg()))
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""
@@ -52,7 +51,21 @@ async def invoke_ai_agent(
             extra_info={"Запит": message_text, "Помилка": str(e)},
         )
         raise
+
+
+async def common_run(
+    manager: BaseDialogManager,
+    ai_agent: AIAgent,
+    message_text: str,
+    log_service: LogService,
+):
+    # запускаем индикатор загрузки
+    loading_task = asyncio.create_task(loading_text_decoration(manager))
+    try:
+        # ждём окончания AI-агента
+        await invoke_ai_agent(manager, ai_agent, message_text, log_service)
     finally:
+        # отменяем таск индикатора, как только агент отработает
         loading_task.cancel()
 
 
@@ -135,5 +148,5 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         return
     await manager.switch_to(states.AIAgentMenu.answer)
     asyncio.create_task(
-        invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
+        common_run(manager.bg(), ai_agent, message_text, channel_log)
     )
