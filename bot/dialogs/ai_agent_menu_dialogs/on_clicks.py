@@ -28,10 +28,10 @@ async def invoke_ai_agent(
     message_text: str,
     log_service: LogService,
 ):
-    llm_response_generator = ai_agent.stream_response(message_text)
-    result_text = ""
-    buffer = ""
     try:
+        llm_response_generator = ai_agent.stream_response(message_text)
+        result_text = ""
+        buffer = ""
         async for chunk, process_chunk in llm_response_generator:
             if process_chunk:
                 await manager.update({"answer": process_chunk})
@@ -109,7 +109,7 @@ async def on_send_first_message_query(
         log_service=channel_log,
     )
     await ai_agent.clear_history()
-    return await on_send_query(message, widget, manager)
+    await on_send_query(message, widget, manager)
 
 
 async def on_send_query(message: Message, widget: MessageInput, manager: DialogManager):
