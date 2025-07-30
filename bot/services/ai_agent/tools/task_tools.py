@@ -192,23 +192,23 @@ class TaskTools(BaseTools):
                         control_point_data["task_id"] = task_id
                         await self.uow.task_control_points.add_one(control_point_data)
                 await self.uow.commit()
-            # await self.create_notification_task_ending_soon(
-            #     task_id=task_id,
-            #     user_id=new_task_data.executor_id,
-            #     _defer_until=new_task_data.end_datetime
-            #     - datetime.timedelta(minutes=30),
-            # )
-            # await self.create_notification_task_is_overdue(
-            #     task_id=task_id,
-            #     executor_id=new_task_data.executor_id,
-            #     creator_id=new_task_data.creator_id,
-            #     _defer_until=new_task_data.end_datetime,
-            # )
-            # await self.create_notification_task_started(
-            #     task_id=task_id,
-            #     user_id=new_task_data.executor_id,
-            #     _defer_until=new_task_data.start_datetime,
-            # )
+            await self.create_notification_task_ending_soon(
+                task_id=task_id,
+                user_id=new_task_data.executor_id,
+                _defer_until=new_task_data.end_datetime
+                - datetime.timedelta(minutes=30),
+            )
+            await self.create_notification_task_is_overdue(
+                task_id=task_id,
+                executor_id=new_task_data.executor_id,
+                creator_id=new_task_data.creator_id,
+                _defer_until=new_task_data.end_datetime,
+            )
+            await self.create_notification_task_started(
+                task_id=task_id,
+                user_id=new_task_data.executor_id,
+                _defer_until=new_task_data.start_datetime,
+            )
             # reply_markup = create_accept_task_kb(task_id)
             #
             # await send_message(
@@ -237,23 +237,23 @@ class TaskTools(BaseTools):
                     task_data_dict = new_task.model_dump(exclude={"task_control_points"})
                     task_id = await self.uow.tasks.add_one(task_data_dict)
                     created_task_ids.append(task_id)
-                    # await self.create_notification_task_ending_soon(
-                    #     task_id=task_id,
-                    #     user_id=new_task.executor_id,
-                    #     _defer_until=new_task.end_datetime
-                    #     - datetime.timedelta(minutes=30),
-                    # )
-                    # await self.create_notification_task_is_overdue(
-                    #     task_id=task_id,
-                    #     executor_id=new_task.executor_id,
-                    #     creator_id=new_task.creator_id,
-                    #     _defer_until=new_task.end_datetime,
-                    # )
-                    # await self.create_notification_task_started(
-                    #     task_id=task_id,
-                    #     user_id=new_task.executor_id,
-                    #     _defer_until=new_task.start_datetime,
-                    # )
+                    await self.create_notification_task_ending_soon(
+                        task_id=task_id,
+                        user_id=new_task.executor_id,
+                        _defer_until=new_task.end_datetime
+                        - datetime.timedelta(minutes=30),
+                    )
+                    await self.create_notification_task_is_overdue(
+                        task_id=task_id,
+                        executor_id=new_task.executor_id,
+                        creator_id=new_task.creator_id,
+                        _defer_until=new_task.end_datetime,
+                    )
+                    await self.create_notification_task_started(
+                        task_id=task_id,
+                        user_id=new_task.executor_id,
+                        _defer_until=new_task.start_datetime,
+                    )
                     if new_task.task_control_points:
                         for control_point in new_task.task_control_points:
                             control_point_data = control_point.model_dump()
@@ -283,32 +283,32 @@ class TaskTools(BaseTools):
                     await self.uow.tasks.edit_one(id=task_data.id, data=task_dict)
 
                 await self.uow.commit()
-                # for task_data in updates_list:
-                    # await self.create_notification_task_updated(
-                    #     task_id=task_data.id,
-                    #     user_id=task_data.executor_id,
-                    # )
-                    # await self.create_notification_task_ending_soon(
-                    #     task_id=task_data.id,
-                    #     user_id=task_data.executor_id,
-                    #     _defer_until=task_data.end_datetime
-                    #     - datetime.timedelta(minutes=30),
-                    #     update_notification=True,
-                    # )
-                    # await self.create_notification_task_is_overdue(
-                    #     task_id=task_data.id,
-                    #     executor_id=task_data.executor_id,
-                    #     creator_id=task_data.creator_id,
-                    #     _defer_until=task_data.end_datetime,
-                    #     update_notification=True,
-                    # )
-                    #
-                    # await self.create_notification_task_started(
-                    #     task_id=task_data.id,
-                    #     user_id=task_data.executor_id,
-                    #     _defer_until=task_data.start_datetime,
-                    #     update_notification=True,
-                    # )
+                for task_data in updates_list:
+                    await self.create_notification_task_updated(
+                        task_id=task_data.id,
+                        user_id=task_data.executor_id,
+                    )
+                    await self.create_notification_task_ending_soon(
+                        task_id=task_data.id,
+                        user_id=task_data.executor_id,
+                        _defer_until=task_data.end_datetime
+                        - datetime.timedelta(minutes=30),
+                        update_notification=True,
+                    )
+                    await self.create_notification_task_is_overdue(
+                        task_id=task_data.id,
+                        executor_id=task_data.executor_id,
+                        creator_id=task_data.creator_id,
+                        _defer_until=task_data.end_datetime,
+                        update_notification=True,
+                    )
+
+                    await self.create_notification_task_started(
+                        task_id=task_data.id,
+                        user_id=task_data.executor_id,
+                        _defer_until=task_data.start_datetime,
+                        update_notification=True,
+                    )
                 return True
 
         @tool
