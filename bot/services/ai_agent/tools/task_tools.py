@@ -182,7 +182,9 @@ class TaskTools(BaseTools):
             """
             task_id = None
             async with self.uow:
-                task_data_dict = new_task_data.model_dump(exclude={"control_points"})
+                task_data_dict = new_task_data.model_dump(
+                    exclude={"task_control_points"}
+                )
                 task_id = await self.uow.tasks.add_one(task_data_dict)
 
                 if new_task_data.task_control_points:
@@ -234,7 +236,9 @@ class TaskTools(BaseTools):
 
             async with self.uow:
                 for new_task in new_task_data:
-                    task_data_dict = new_task.model_dump(exclude={"task_control_points"})
+                    task_data_dict = new_task.model_dump(
+                        exclude={"task_control_points"}
+                    )
                     task_id = await self.uow.tasks.add_one(task_data_dict)
                     created_task_ids.append(task_id)
                     await self.create_notification_task_ending_soon(
