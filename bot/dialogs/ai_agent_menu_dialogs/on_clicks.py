@@ -19,7 +19,6 @@ from ...utils.unitofwork import UnitOfWork
 from . import states
 
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -28,10 +27,12 @@ async def invoke_ai_agent(
     ai_agent: AIAgent,
     message_text: str,
     log_service: LogService,
+    bot: Bot,
 ):
     llm_response_generator = ai_agent.stream_response(message_text)
     result_text = ""
     buffer = ""
+    loading_task = asyncio.create_task(loading_text_decoration(manager.bg()))
     try:
         async for chunk, process_chunk in llm_response_generator:
             if process_chunk:
@@ -52,6 +53,21 @@ async def invoke_ai_agent(
             extra_info={"Запит": message_text, "Помилка": str(e)},
         )
         raise
+    finally:
+        loading_task.cancel()
+
+
+async def loading_text_decoration(
+    manager: BaseDialogManager,
+):
+    stages = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+    for i in range(300):
+        for stage in stages:
+            await manager.update(
+                {"process_loading": f"{stage} Опрацьовуємо відповідь..."}
+            )
+            await asyncio.sleep(1)
 
 
 async def on_send_first_message_query(
@@ -118,6 +134,7 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     else:
         await message.answer(i18n.get("ai-agent-doesnt-support-this-content-type"))
         return
-    manager.dialog_data["answer"] = "Опрацьовуємо ваш запит, будь ласка, зачекайте..."
     await manager.switch_to(states.AIAgentMenu.answer)
-    asyncio.create_task(invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log))
+    asyncio.create_task(
+        invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log, bot)
+    )

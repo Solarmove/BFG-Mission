@@ -17,8 +17,8 @@ from . import getters, on_clicks, states
 send_query_window = Window(
     Case(
         {
-            'analytics': I18nFormat("ai-agent-analytics-text"),
-            'helper': I18nFormat("ai-agent-helper-text"),
+            "analytics": I18nFormat("ai-agent-analytics-text"),
+            "helper": I18nFormat("ai-agent-helper-text"),
         },
         selector="prompt",
     ),
@@ -39,6 +39,7 @@ show_ai_answer_window = Window(
         id="ai_answer",
         page_size=2000,
     ),
+    Format("{process_loading}", when=F["answer_len"] < 1),
     Row(
         PrevPage(
             scroll="ai_answer",
