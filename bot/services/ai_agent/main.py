@@ -1,7 +1,5 @@
-import asyncio
 import logging
 import re
-from pprint import pprint
 from typing import Sequence
 
 import langchain
@@ -17,10 +15,6 @@ from langchain_core.runnables import RunnableWithMessageHistory, RunnableConfig
 from langchain_core.tools import BaseTool
 from openai import RateLimitError
 from redis.asyncio import Redis
-
-from bot.services.ai_agent.utils.redis_chat_history import RedisChatMessageHistory
-from bot.services.log_service import LogService
-from bot.utils.consts import unallowed_characters
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -28,6 +22,9 @@ from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
 )
+
+from bot.services.ai_agent.utils.redis_chat_history import RedisChatMessageHistory
+from bot.services.log_service import LogService
 
 langchain.debug = False  # Еще более детальный вывод
 logger = logging.getLogger(__name__)
@@ -132,19 +129,6 @@ class AIAgent:
                 async for chunk in self._agent_with_history.astream(
                     input={"input": content}, config=config
                 ):
-                    if "output" not in chunk and "messages" in chunk:
-                        messages = chunk["messages"]
-                        for message in messages:
-                            if not isinstance(message, AIMessage):
-                                continue
-                            if hasattr(message, "content") and len(message.content) > 0:
-                                text = self.replace_unallowed_characters(
-                                    message.content
-                                )
-                                text += "\n\nОпрацьовуємо запит..."
-                                yield response_text, text
-                            yield None, None
-
                     if "output" in chunk:
                         response_text += self.replace_unallowed_characters(
                             chunk["output"]
@@ -158,9 +142,22 @@ class AIAgent:
                             },
                         )
                         yield response_text, None
-                    else:
-                        yield None, None
+                    if "messages" in chunk:
+                        messages = chunk["messages"]
+                        for message in messages:
+                            if not isinstance(message, AIMessage):
+                                continue
+                            if hasattr(message, "content") and len(message.content) > 0:
+                                text = self.replace_unallowed_characters(
+                                    message.content
+                                )
+                                text += "\n\nОпрацьовуємо запит..."
+                                yield response_text, text
+                            yield None, None
+                        continue
 
-            err = RuntimeError("Не вдалося отримати відповідь після 6 спроб (429)")
-            await self.log_service.log_exception(err, context="AI agent streaming")
-            raise err
+                    yield None, None
+                return
+        err = RuntimeError("Не вдалося отримати відповідь після 6 спроб (429)")
+        await self.log_service.log_exception(err, context="AI agent streaming")
+        raise err
