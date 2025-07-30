@@ -132,7 +132,12 @@ class WorkScheduleTools(BaseTools):
                         await self.uow.commit()
                         schedules_created += 1
                     else:
-                        schedules_exists += 1
+                        await self.uow.work_schedules.edit_one(
+                            id=work_schedule_exists.id,
+                            data=work_schedule_data.model_dump(
+                                exclude_unset=True, exclude_none=True
+                            ),
+                        )
                 return ScheduleCreationResult(
                     created_count=schedules_created,
                     existing_count=schedules_exists,
