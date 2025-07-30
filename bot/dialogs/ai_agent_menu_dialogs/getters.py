@@ -34,7 +34,7 @@ async def ai_agent_answer_getter(
     Getter function for AI Agent answer dialog.
     Retrieves the answer from the user's state.
     """
-    answer = dialog_manager.dialog_data["answer"]
+    answer = dialog_manager.dialog_data.get("answer")
     process_loading = dialog_manager.dialog_data.get(
         "process_loading", "Опрацьовуємо відповідь..."
     )
