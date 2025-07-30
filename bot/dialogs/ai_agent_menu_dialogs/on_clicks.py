@@ -32,14 +32,8 @@ async def invoke_ai_agent(
         llm_response_generator = ai_agent.stream_response(message_text)
         result_text = ""
         buffer = ""
-        stages = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         current_stage = 0
         async for chunk, process_chunk in llm_response_generator:
-            await manager.update(
-                {
-                    "process_loading": f"f{stages[current_stage]} Опрацьовуємо відповідь..."
-                }
-            )
             current_stage += 1
             if current_stage >= 9:
                 current_stage = 0
@@ -111,6 +105,14 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     task_tools = Tools(uow=UnitOfWork(), arq=arq, bot=bot)
     user_hierarchy_level = manager.dialog_data["hierarchy_level"]
     is_analytics = start_data.get("prompt") == "analytics"
+    if message.text:
+        message_text = message.text
+    elif message.voice:
+        message_text = await voice_to_text(bot, message)
+    else:
+        await message.answer(i18n.get("ai-agent-doesnt-support-this-content-type"))
+        return
+
     prompt = get_prompt(user_hierarchy_level, is_analytics=is_analytics)
     ai_agent = AIAgent(
         model=llm,
@@ -122,14 +124,11 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
         chat_id=message.from_user.id,
         log_service=channel_log,
     )
-    if message.text:
-        message_text = message.text
-    elif message.voice:
-        message_text = await voice_to_text(bot, message)
-    else:
-        await message.answer(i18n.get("ai-agent-doesnt-support-this-content-type"))
-        return
+
     await manager.switch_to(states.AIAgentMenu.answer)
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+
     asyncio.create_task(
         invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
     )
+
