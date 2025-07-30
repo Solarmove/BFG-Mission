@@ -32,7 +32,17 @@ async def invoke_ai_agent(
         llm_response_generator = ai_agent.stream_response(message_text)
         result_text = ""
         buffer = ""
+        stages = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        current_stage = 0
         async for chunk, process_chunk in llm_response_generator:
+            await manager.update(
+                {
+                    "process_loading": f"f{stages[current_stage]} Опрацьовуємо відповідь..."
+                }
+            )
+            current_stage += 1
+            if current_stage >= 9:
+                current_stage = 0
             if process_chunk:
                 await manager.update({"answer": process_chunk})
                 continue
@@ -50,36 +60,9 @@ async def invoke_ai_agent(
             context="AI agent. Загальний",
             extra_info={"Запит": message_text, "Помилка": str(e)},
         )
-        raise
-
-
-async def common_run(
-    manager: BaseDialogManager,
-    ai_agent: AIAgent,
-    message_text: str,
-    log_service: LogService,
-):
-    # запускаем индикатор загрузки
-    loading_task = asyncio.create_task(loading_text_decoration(manager))
-    try:
-        # ждём окончания AI-агента
-        await invoke_ai_agent(manager, ai_agent, message_text, log_service)
-    finally:
-        # отменяем таск индикатора, как только агент отработает
-        loading_task.cancel()
-
-
-async def loading_text_decoration(
-    manager: BaseDialogManager,
-):
-    stages = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-
-    for i in range(300):
-        for stage in stages:
-            await manager.update(
-                {"process_loading": f"{stage} Опрацьовуємо відповідь..."}
-            )
-            await asyncio.sleep(1)
+        await manager.update(
+            {"answer": "Виникла помилка при обробці запиту. Спробуйте ще раз."}
+        )
 
 
 async def on_send_first_message_query(
@@ -150,4 +133,3 @@ async def on_send_query(message: Message, widget: MessageInput, manager: DialogM
     asyncio.create_task(
         invoke_ai_agent(manager.bg(), ai_agent, message_text, channel_log)
     )
-    loading_task = asyncio.create_task(loading_text_decoration(manager))

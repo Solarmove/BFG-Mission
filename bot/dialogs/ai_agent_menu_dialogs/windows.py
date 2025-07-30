@@ -8,7 +8,7 @@ from aiogram_dialog.widgets.kbd import (
     PrevPage,
     Row,
 )
-from aiogram_dialog.widgets.text import Case, Const, Format, ScrollingText
+from aiogram_dialog.widgets.text import Case, Const, Format, ScrollingText, Multi
 from magic_filter import F
 
 from ...i18n.utils.i18n_format import I18nFormat
@@ -34,8 +34,10 @@ send_query_window = Window(
 
 
 show_ai_answer_window = Window(
-    ScrollingText(Format("{answer}"), id="ai_answer", page_size=2000, when=F["answer"]),
-    Format("{process_loading}", when=~F["answer"]),
+    Multi(
+        ScrollingText(Format("{answer}"), id="ai_answer", page_size=2000, when=F["answer"]),
+        Format("{process_loading}", when=~F["answer"]),
+    ),
     Row(
         PrevPage(
             scroll="ai_answer",
