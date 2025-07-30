@@ -125,8 +125,6 @@ class WorkScheduleTools(BaseTools):
                     work_schedule_exists = await self.uow.work_schedules.find_one(
                         user_id=work_schedule_data.user_id,
                         date=work_schedule_data.date,
-                        start_time=work_schedule_data.start_time,
-                        end_time=work_schedule_data.end_time,
                     )
                     if not work_schedule_exists:
                         work_schedule_dict = work_schedule_data.model_dump()
