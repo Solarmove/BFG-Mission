@@ -46,11 +46,11 @@ async def loading_text_decoration(message: Message):
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError)
 async def run_ai_generation_with_loader(
-    ai_agent: AIAgent, message: Message, message_text: str
+    ai_agent: AIAgent, message: Message, message_text: str, channel_log
 ):
     loading_task = asyncio.create_task(loading_text_decoration(message))
     try:
-        text = await generate_llm_response(ai_agent, message_text)
+        text = await generate_llm_response(ai_agent, message_text, channel_log)
     finally:
         loading_task.cancel()
     return text
