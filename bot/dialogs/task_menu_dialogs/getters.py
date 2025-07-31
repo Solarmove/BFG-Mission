@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from aiogram.types import User  # noqa: F401
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram_dialog.api.entities import MediaAttachment, MediaId
@@ -129,7 +130,7 @@ async def get_task(
     report_text_list = []
     start_data = dialog_manager.start_data or {}
     task_id = dialog_manager.dialog_data.get("task_id", start_data.get("task_id"))
-    task_dict = await uow.tasks.get_task_by_id(task_id)
+    task_dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
     task = TaskReadExtended.model_validate(task_dict)
     if task.reports:
         for report in task.reports:

@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -139,7 +140,8 @@ class WorkScheduleRepo(SQLAlchemyRepository):
         return res.scalars().all()
 
     async def get_count_of_users_on_shift(self):
-        datetime_now = datetime.datetime.now()
+        tz_info = pytz.timezone("Europe/Kyiv")
+        datetime_now = datetime.datetime.now(tz_info)
         stmt = (
             select(func.count(self.model.id))
             .where(

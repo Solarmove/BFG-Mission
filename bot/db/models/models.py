@@ -170,9 +170,9 @@ class Task(Base):
     )
     title: Mapped[str] = mapped_column(VARCHAR(255), nullable=False)
     description: Mapped[str | None] = mapped_column(TEXT, nullable=True)
-    start_datetime = mapped_column(TIMESTAMP, nullable=False)
-    end_datetime = mapped_column(TIMESTAMP, nullable=False)
-    completed_datetime = mapped_column(TIMESTAMP, nullable=True)
+    start_datetime = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    end_datetime = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    completed_datetime = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     category_id = mapped_column(
         INTEGER,
         ForeignKey("task_categories.id", ondelete="SET NULL"),
@@ -183,11 +183,11 @@ class Task(Base):
     file_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
     status = mapped_column(ENUM(TaskStatus), nullable=False, default=TaskStatus.NEW)
     created_at: Mapped[str] = mapped_column(
-        TIMESTAMP,
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
     )
     updated_at: Mapped[str] = mapped_column(
-        TIMESTAMP, server_default=func.now(), onupdate=func.now()
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     category: Mapped["TaskCategory"] = Relationship(
@@ -215,8 +215,8 @@ class TaskControlPoints(Base):
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=False,
     )
-    deadline = mapped_column(TIMESTAMP, nullable=False)
-    datetime_complete = mapped_column(TIMESTAMP, nullable=True)
+    deadline = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    datetime_complete = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     description: Mapped[str] = mapped_column(TEXT, nullable=False)
 
     task: Mapped["Task"] = Relationship(back_populates="control_points")
@@ -253,7 +253,7 @@ class TaskReport(Base):
     )
     report_text: Mapped[str] = mapped_column(TEXT, nullable=False)
     created_at: Mapped[str] = mapped_column(
-        TIMESTAMP,
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
     )
 

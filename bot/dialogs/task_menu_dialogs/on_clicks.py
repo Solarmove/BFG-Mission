@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import pytz
 from aiogram import Bot
 from aiogram.enums import ContentType
 from aiogram.types import CallbackQuery, Message
@@ -61,7 +62,12 @@ async def on_confirm_task_click(
     channel_log: LogService = manager.middleware_data.get("channel_log")
     start_data = manager.start_data or {}
     task_id = manager.dialog_data.get("task_id", start_data.get("task_id"))
-
+    task_model = await uow.tasks.find_one(id=task_id)
+    if task_model.status != TaskStatus.NEW:
+        await call.answer(
+            i18n.get("task-already-confirmed-or-canceled"), show_alert=True
+        )
+        return
     try:
         await uow.tasks.edit_one(id=task_id, data=dict(status=TaskStatus.IN_PROGRESS))
         await uow.commit()
@@ -336,7 +342,8 @@ async def on_confirm_complete_task_click(
     task_model = TaskReadExtended.model_validate(task_model_dict)
     report_text = manager.dialog_data.get("report_text", "")
     report_media_list = manager.dialog_data.get("report_media_list", [])
-    datetime_complete = datetime.datetime.now()
+    tz_info = pytz.timezone('Europe/Kyiv')
+    datetime_complete = datetime.datetime.now(tz_info)
     is_control_point = bool(control_point_id)
     if is_control_point:
         control_point_model = await uow.task_control_points.find_one(

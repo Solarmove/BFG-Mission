@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Literal, TypeAlias, Any, Coroutine
 
+import pytz
 from arq import ArqRedis
 from arq.jobs import Job
 
@@ -48,8 +49,8 @@ async def create_notification_job(
             Якщо False, то створює нове сповіщення. Якщо сповіщення вже існує - нове сповіщення не буде створено.
     """
     log_service = LogService()
-
-    datetime_now = datetime.datetime.now()
+    tz_info = pytz.timezone("Europe/Kyiv")
+    datetime_now = datetime.datetime.now(tz_info)
     if _defer_until and datetime_now > _defer_until:
         await log_service.warning(
             "Завдання не може бути створено, оскільки час відкладання вже минув.",

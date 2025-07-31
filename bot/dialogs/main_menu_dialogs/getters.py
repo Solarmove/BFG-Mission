@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram.types import User  # noqa: F401
 from aiogram_i18n import I18nContext
@@ -32,8 +33,9 @@ async def main_menu_getter(
                     task_title=task.title,
                     task_deadline=task.end_datetime.strftime("%d.%m.%Y, %H:%M"),
                 )
+    tz_info = pytz.timezone("Europe/Kyiv")
     return {
-        "datetime_now": datetime.datetime.now(),
+        "datetime_now": datetime.datetime.now(tz_info),
         "full_name": user_model.full_name or user_model.full_name_tg,
         "username": user_model.username,
         "position": user_model.position.title,
