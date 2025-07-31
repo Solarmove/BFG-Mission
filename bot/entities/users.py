@@ -3,6 +3,19 @@ import datetime
 from pydantic import BaseModel
 
 
+class HierarchyLevelRead(BaseModel):
+    """Модель для читання даних рівня ієрархії користувача з бази даних."""
+
+    id: int
+    """Унікальний ідентифікатор рівня ієрархії в базі даних."""
+    title: str
+    """Назва рівня ієрархії користувача."""
+    prompt: str
+    """Промпт для всіх завдань, який використовується"""
+    analytics_prompt: str
+    """Промпт для аналітики, який використовується"""
+
+
 class PositionRead(BaseModel):
     """Модель для читання даних позиції користувача з бази даних."""
 
@@ -10,8 +23,9 @@ class PositionRead(BaseModel):
     """Унікальний ідентифікатор позиції користувача в базі даних."""
     title: str
     """Назва посади користувача."""
-    hierarchy_level: int
-    """рівень ієрархії користувача."""
+    hierarchy_level_id: int | None = None
+    """ID рівня ієрархії, до якого належить позиція користувача."""
+    hierarchy_level: HierarchyLevelRead | None = None
 
 
 class UserRead(BaseModel):

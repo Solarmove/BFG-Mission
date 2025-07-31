@@ -12,6 +12,7 @@ from bot.db.models.models import (
     TaskReportContent,
     User,
     WorkSchedule,
+    HierarchyLevel,
 )
 from bot.db.redis import redis_cache
 from bot.entities.shared import TaskReadExtended
@@ -24,7 +25,11 @@ class UserRepo(SQLAlchemyRepository):
     model = User
 
     async def get_all_users(self):
-        stmt = select(self.model).options(joinedload(self.model.position))
+        stmt = select(self.model).options(
+            joinedload(self.model.position).options(
+                joinedload(Positions.hierarchy_level)
+            )
+        )
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
@@ -32,7 +37,11 @@ class UserRepo(SQLAlchemyRepository):
         stmt = (
             select(self.model)
             .where(self.model.id == user_id)
-            .options(joinedload(self.model.position))
+            .options(
+                joinedload(self.model.position).options(
+                    joinedload(Positions.hierarchy_level)
+                )
+            )
         )
         res = await self.session.execute(stmt)
         return res.scalars().first()
@@ -50,7 +59,9 @@ class UserRepo(SQLAlchemyRepository):
             select(self.model)
             .where(self.model.id == user_id)
             .options(
-                joinedload(self.model.position),
+                joinedload(self.model.position).options(
+                    joinedload(Positions.hierarchy_level)
+                ),
                 selectinload(self.model.work_schedules),
                 selectinload(self.model.created_tasks),
                 selectinload(self.model.executed_tasks),
@@ -64,7 +75,10 @@ class UserRepo(SQLAlchemyRepository):
         self,
     ):
         stmt = select(self.model).options(
-            selectinload(self.model.work_schedules), joinedload(self.model.position)
+            selectinload(self.model.work_schedules),
+            joinedload(self.model.position).options(
+                joinedload(Positions.hierarchy_level)
+            ),
         )
         res = await self.session.execute(stmt)
         return res.unique().scalars().all()
@@ -80,42 +94,24 @@ class UserRepo(SQLAlchemyRepository):
     ) -> int | None:
         """Get the hierarchy level of a user."""
         stmt = (
-            select(self.model)
-            .where(self.model.id == user_id)
-            .options(joinedload(self.model.position))
+            select(HierarchyLevel.level)
+            .join(Positions, HierarchyLevel.id == Positions.hierarchy_level_id)
+            .join(User, Positions.id == User.position_id)
+            .where(User.id == user_id)
         )
         res = await self.session.execute(stmt)
-        result = res.scalar_one_or_none()
-        return result.position.hierarchy_level if result is not None else None
+        return res.scalar_one_or_none()
 
-    async def get_user_from_hierarchy(self, level: Role):
+    @redis_cache(expiration=60)
+    async def get_user_hierarchy_prompt(self, user_id: int):
+        """Get the hierarchy level of a user."""
         stmt = (
-            select(self.model)
-            .join(
-                Positions,
-                self.model.position_id == Positions.id,
-            )
-            .where(
-                Positions.hierarchy_level <= level,
-            )
+            select(HierarchyLevel.prompt, HierarchyLevel.analytics_prompt)
+            .join(User, User.id == user_id)
+            .join(Positions, HierarchyLevel.id == Positions.hierarchy_level_id)
         )
         res = await self.session.execute(stmt)
-        return res.scalars().all()
-
-    @redis_cache(expiration=5)
-    async def get_user_from_hierarchy_count(self, level: Role):
-        stmt = (
-            select(func.count(self.model.id))
-            .join(
-                Positions,
-                self.model.position_id == Positions.id,
-            )
-            .where(
-                Positions.hierarchy_level <= level,
-            )
-        )
-        res = await self.session.execute(stmt)
-        return res.scalar_one_or_none() or 0
+        return res.scalars().one_or_none() or (None, None)
 
 
 class WorkScheduleRepo(SQLAlchemyRepository):

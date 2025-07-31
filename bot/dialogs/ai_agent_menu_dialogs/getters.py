@@ -20,7 +20,7 @@ async def ai_agent_getter(
     return {
         "hierarchy_level": hierarchy_level,
         "full_name": my_full_name or event_from_user.full_name,
-        "prompt": dialog_manager.start_data.get("prompt"),
+
     }
 
 

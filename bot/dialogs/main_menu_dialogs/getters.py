@@ -30,7 +30,7 @@ async def main_menu_getter(
     user_model: UserModel = await uow.users.get_user_by_id(user_id=event_from_user.id)
     current_task_text = ""
 
-    if user_model.position.hierarchy_level > 1:
+    if user_model.position.hierarchy_level.level > 1:
         current_tasks: list[Task] = await uow.tasks.get_task_in_work(user_model.id)
         current_task_text = ""
         if current_tasks:
@@ -46,6 +46,6 @@ async def main_menu_getter(
         "full_name": user_model.full_name or user_model.full_name_tg,
         "username": user_model.username,
         "position": user_model.position.title,
-        "hierarchy_level": user_model.position.hierarchy_level,
+        "hierarchy_level": user_model.position.hierarchy_level.level,
         "current_task": current_task_text,
     }

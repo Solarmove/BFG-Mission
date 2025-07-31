@@ -1,10 +1,13 @@
-from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, CallbackQuery
+from aiogram_i18n import I18nContext
 
 from . import states, getters, on_clicks  # noqa: F401
 from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager, StartMode  # noqa: F401
 
+from ..ai_agent_menu_dialogs.states import AIAgentMenu
 from ...db.models.models import Positions
 from ...utils.unitofwork import UnitOfWork
 
@@ -39,3 +42,36 @@ async def on_enter_full_name_click(
         )
     await uow.commit()
     await manager.start(states.MainMenu.select_action, mode=StartMode.RESET_STACK)
+
+
+async def on_ai_agent_click(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    """
+    Handle the click event for the AI Agent button.
+    """
+    await manager.done()
+    state: FSMContext = manager.middleware_data["state"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    await call.message.answer(i18n.get("ai-agent-helper-text"))
+    await state.set_state(AIAgentMenu.send_query)
+    await state.set_data({"agent_type": "helper"})
+
+
+async def on_analytics_click(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    """
+    Handle the click event for the Analytics button.
+    """
+    await manager.done()
+    state: FSMContext = manager.middleware_data["state"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    await call.message.answer(i18n.get("ai-agent-analytics-text"))
+    await state.set_state(AIAgentMenu.send_query)
+    await state.set_data({"agent_type": "analytics"}
+)
