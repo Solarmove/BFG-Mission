@@ -51,7 +51,7 @@ async def create_notification_job(
     log_service = LogService()
     tz_info = pytz.timezone("Europe/Kyiv")
     datetime_now = datetime.datetime.now(tz_info)
-    if _defer_until and datetime_now > _defer_until:
+    if _defer_until.tim and datetime_now > _defer_until:
         await log_service.warning(
             "Завдання не може бути створено, оскільки час відкладання вже минув.",
             extra_info={

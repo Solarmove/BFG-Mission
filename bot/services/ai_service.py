@@ -6,18 +6,27 @@ import backoff
 import openai
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.types import Message
+from pydantic import ValidationError
 
 from bot.services.ai_agent.main import AIAgent
+from bot.services.log_service import LogService
 
 
-async def generate_llm_response(ai_agent: AIAgent, message_text: str):
+async def generate_llm_response(
+    ai_agent: AIAgent, message_text: str, log_service: LogService
+):
     llm_response_generator = ai_agent.stream_response(message_text)
     text = ""
-    async for chunk in llm_response_generator:
-        if chunk is None:
-            continue
-        text += chunk
-
+    try:
+        async for chunk in llm_response_generator:
+            if chunk is None:
+                continue
+            text += chunk
+    except ValidationError as e:
+        await log_service.log_exception(e, extra_info={"message_text": message_text})
+        logging.error("ValidationError occurred while processing LLM response.")
+        text = ("Виникла помилка при обробці запиту.\n\n"
+                "<b>Будь ласка, повторіть ваш запит ще раз.</b>")
     return text
 
 

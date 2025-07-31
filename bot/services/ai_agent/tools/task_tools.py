@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from aiogram import Bot
 from arq import ArqRedis
 from langchain_core.tools import tool
@@ -166,16 +167,18 @@ class TaskTools(BaseTools):
     def get_tools(self) -> TaskToolsData:
         @tool
         async def create_one_task(
-            new_task_data: TaskCreate, text_user_notification: str
+            new_task_data: TaskCreate
         ):
             """
             Создает новою задачу для пользователя.
 
             :param new_task_data: TaskCreate instance containing task details.
-            :param text_user_notification: Text of the notification to be sent to the user about the new task.
 
             :return: The ID of the created task.
             """
+            tz_info = pytz.timezone('Europe/Kyiv')
+            new_task_data.start_datetime.replace(tzinfo=tz_info)
+            new_task_data.end_datetime.replace(tzinfo=tz_info)
             task_id = None
             async with self.uow:
                 task_data_dict = new_task_data.model_dump(
@@ -220,9 +223,12 @@ class TaskTools(BaseTools):
             :return: list of created task IDs.
             """
             created_task_ids = []
+            tz_info = pytz.timezone("Europe/Kyiv")
 
             async with self.uow:
                 for new_task in new_task_data:
+                    new_task.start_datetime.replace(tzinfo=tz_info)
+                    new_task.end_datetime.replace(tzinfo=tz_info)
                     task_data_dict = new_task.model_dump(
                         exclude={"task_control_points"}
                     )
@@ -266,8 +272,13 @@ class TaskTools(BaseTools):
             Returns:
                 bool: True, якщо завдання були успішно оновлені, False в іншому випадку.
             """
+            tz_info = pytz.timezone('Europe/Kyiv')
             async with self.uow:
                 for task_data in updates_list:
+                    if task_data.start_datetime:
+                        task_data.start_datetime.replace(tzinfo=tz_info)
+                    if task_data.end_datetime:
+                        task_data.end_datetime.replace(tzinfo=tz_info)
                     task_dict = task_data.model_dump(
                         exclude_unset=True, exclude_none=True, exclude={"id"}
                     )
