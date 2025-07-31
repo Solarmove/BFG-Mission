@@ -133,38 +133,6 @@ class UserTools(BaseTools):
             return [PositionRead.model_validate(position) for position in result]
 
         @tool
-        async def get_position_by_id_func(position_id: int) -> PositionRead | None:
-            """
-            Отримати позицію користувача за її ID.
-
-            :param position_id: ID позиції, яку потрібно отримати.
-
-            Returns:
-                PositionRead | None: Позиція або None, якщо позиція не знайдена.
-            """
-            result = await self.get_position_by_id(position_id)
-            if result is None:
-                return None
-            return PositionRead.model_validate(result)
-
-        @tool
-        async def get_user_position(
-            user_id: int,
-        ) -> PositionRead | None:
-            """
-            Отримати посаду користувача за його ID.
-
-            :param user_id: ID користувача, для якого потрібно отримати позицію.
-
-            Returns:
-                PositionRead | None: Позиція або None, якщо позиція не знайдена.
-            """
-            result = await self.get_user_position(user_id)
-            if result is None:
-                return None
-            return PositionRead.model_validate(result)
-
-        @tool
         async def get_all_users_from_db() -> list[UserRead]:
             """
             Отримати всіх користувачів з бази даних.
@@ -212,7 +180,7 @@ class UserTools(BaseTools):
             if user is None:
                 return None
             user_model = UserRead.model_validate(user)
-            return user_model.position.hierarchy_level
+            return user_model.position.hierarchy_level.level
 
         @tool
         async def create_reply_markup_for_accept_task(task_id: int) -> ReplyMarkupUnion:

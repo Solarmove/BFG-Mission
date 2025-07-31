@@ -4,17 +4,8 @@ from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram.types import User  # noqa: F401
 from aiogram_i18n import I18nContext
 
-from bot.utils.consts import get_positions_titles
 from bot.utils.unitofwork import UnitOfWork
 from bot.db.models.models import User as UserModel, Task
-
-
-async def positions_getter(dialog_manager: DialogManager, **kwargs):
-    """
-    Get the titles of positions based on the user's hierarchy level.
-    """
-    hierarchy_level = dialog_manager.start_data.get("hierarchy_level")
-    return {"positions": get_positions_titles(hierarchy_level)}
 
 
 async def main_menu_getter(

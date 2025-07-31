@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, Any, Coroutine
 
 from arq import ArqRedis
 from arq.jobs import Job
@@ -26,7 +26,7 @@ async def create_notification_job(
     _defer_until: datetime.datetime | None = None,
     _defer_by: datetime.timedelta | None = None,
     update_notification: bool = False,
-) -> None:
+) -> str | None:
     """
     Створює завдання для надсилання сповіщення користувачу по задач
 
@@ -47,7 +47,11 @@ async def create_notification_job(
         update_notification (bool): Якщо True, то оновлює існуюче сповіщення, якщо воно вже є.
             Якщо False, то створює нове сповіщення. Якщо сповіщення вже існує - нове сповіщення не буде створено.
     """
-
+    datetime_now = datetime.datetime.now()
+    if _defer_until and datetime_now > _defer_until:
+        return "Завдання не може бути створено, оскільки час відкладання вже минув."
+    if _defer_by and _defer_by.total_seconds() < 0:
+        return "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним."
     job_id = (
         f"notification_{notification_for}_{notification_subject}_{user_id}_{task_id}"
     )

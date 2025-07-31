@@ -1,5 +1,6 @@
+from aiogram.exceptions import TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 from aiogram_i18n import I18nContext
 
 from . import states, getters, on_clicks  # noqa: F401
@@ -7,8 +8,9 @@ from aiogram_dialog.widgets.kbd import Button, Select  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager, StartMode  # noqa: F401
 
-from ..ai_agent_menu_dialogs.states import AIAgentMenu
 from ...db.models.models import Positions
+from ...keyboards.ai import exit_ai_agent_kb
+from ...states.ai import AIAgentMenu
 from ...utils.unitofwork import UnitOfWork
 
 
@@ -55,9 +57,26 @@ async def on_ai_agent_click(
     await manager.done()
     state: FSMContext = manager.middleware_data["state"]
     i18n: I18nContext = manager.middleware_data["i18n"]
-    await call.message.answer(i18n.get("ai-agent-helper-text"))
+    try:
+        await call.message.edit_text(
+            i18n.get("ai-agent-helper-text"),
+            reply_markup=exit_ai_agent_kb().as_markup(),
+        )
+    except TelegramRetryAfter as e:
+        await call.message.edit_reply_markup(
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[]])
+        )
+        await call.message.answer(
+            i18n.get("ai-agent-helper-text"),
+            reply_markup=exit_ai_agent_kb().as_markup(),
+        )
+
     await state.set_state(AIAgentMenu.send_query)
-    await state.set_data({"agent_type": "helper"})
+    call_data = {
+        "message_id": call.message.message_id,
+        "inline_message_id": call.inline_message_id,
+    }
+    await state.set_data({"agent_type": "helper", "call_data": call_data})
 
 
 async def on_analytics_click(
@@ -71,6 +90,13 @@ async def on_analytics_click(
     await manager.done()
     state: FSMContext = manager.middleware_data["state"]
     i18n: I18nContext = manager.middleware_data["i18n"]
-    await call.message.answer(i18n.get("ai-agent-analytics-text"))
+    await call.message.edit_text(
+        i18n.get("ai-agent-analytics-text"),
+        reply_markup=exit_ai_agent_kb().as_markup(),
+    )
     await state.set_state(AIAgentMenu.send_query)
-    await state.set_data({"agent_type": "analytics"})
+    call_data = {
+        "message_id": call.message.message_id,
+        "inline_message_id": call.inline_message_id,
+    }
+    await state.set_data({"agent_type": "analytics", 'call_data': call_data})

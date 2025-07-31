@@ -126,17 +126,17 @@ class AIAgent:
                         "Chat ID": self.chat_id,
                     },
                 )
-                yield response_text, None
-            if "messages" in chunk:
-                messages = chunk["messages"]
-                for message in messages:
-                    if not isinstance(message, AIMessage):
-                        continue
-                    if hasattr(message, "content") and len(message.content) > 0:
-                        text = self.replace_unallowed_characters(message.content)
-                        text += "\n\nОпрацьовуємо запит..."
-                        yield response_text, text
-                    yield None, None
-                continue
+                yield response_text
+            # if "messages" in chunk:
+            #     messages = chunk["messages"]
+            #     for message in messages:
+            #         if not isinstance(message, AIMessage):
+            #             continue
+            #         if hasattr(message, "content") and len(message.content) > 0:
+            #             text = self.replace_unallowed_characters(message.content)
+            #             text += "\n\nОпрацьовуємо запит..."
+            #             yield response_text, text
+            #         yield None, None
+            #     continue
 
-            yield None, None
+            yield None

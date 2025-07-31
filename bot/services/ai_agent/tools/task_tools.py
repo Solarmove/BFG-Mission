@@ -205,14 +205,6 @@ class TaskTools(BaseTools):
                 user_id=new_task_data.executor_id,
                 _defer_until=new_task_data.start_datetime,
             )
-            # reply_markup = create_accept_task_kb(task_id)
-            #
-            # await send_message(
-            #     bot=self.bot,
-            #     chat_id=new_task_data.executor_id,
-            #     text=text_user_notification,
-            #     reply_markup=reply_markup,
-            # )
             return task_id
 
         @tool

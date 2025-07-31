@@ -44,7 +44,11 @@ bot = Bot(
 )
 key_builder = DefaultKeyBuilder(with_destiny=True, with_bot_id=True)
 storage = RedisStorage(redis=redis, key_builder=key_builder)
-event_isolation = RedisEventIsolation(redis, key_builder=key_builder)
+event_isolation = RedisEventIsolation(
+    redis,
+    key_builder=key_builder,
+    lock_kwargs={"timeout": 240, "blocking_timeout": 5},
+)
 dp = Dispatcher(storage=storage, events_isolation=event_isolation)
 router = Router(name=__name__)
 

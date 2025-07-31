@@ -45,6 +45,9 @@ class Config(BaseSettings):
         "bot", "i18n", "locales", "{locale}", "LC_MESSAGES"
     )
     openai_api_key: str
+    admin_panel_login: str
+    admin_panel_password: str
+    admin_panel_session_secret: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

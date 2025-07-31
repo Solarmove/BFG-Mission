@@ -13,7 +13,9 @@ dependencies = [
     "asyncpg>=0.30.0",
     "backoff>=2.2.1",
     "faiss-cpu>=1.11.0.post1",
+    "fastapi>=0.116.1",
     "fluent-runtime>=0.4.0",
+    "itsdangerous>=2.2.0",
     "langchain>=0.3.26",
     "langchain-community>=0.3.27",
     "langchain-openai>=0.3.28",
@@ -21,6 +23,8 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "sqlalchemy>=2.0.41",
+    "starlette-admin>=0.15.1",
+    "uvicorn>=0.35.0",
 ]
 
 [dependency-groups]

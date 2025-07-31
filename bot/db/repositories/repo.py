@@ -105,13 +105,17 @@ class UserRepo(SQLAlchemyRepository):
     @redis_cache(expiration=60)
     async def get_user_hierarchy_prompt(self, user_id: int):
         """Get the hierarchy level of a user."""
-        stmt = (
-            select(HierarchyLevel.prompt, HierarchyLevel.analytics_prompt)
-            .join(User, User.id == user_id)
-            .join(Positions, HierarchyLevel.id == Positions.hierarchy_level_id)
+        user = await self.session.get(
+            User,
+            user_id,
+            options=[
+                selectinload(User.position).selectinload(Positions.hierarchy_level)
+            ],
         )
-        res = await self.session.execute(stmt)
-        return res.scalars().one_or_none() or (None, None)
+        if not user or not user.position or not user.position.hierarchy_level:
+            return None
+        hl = user.position.hierarchy_level
+        return hl.prompt, hl.analytics_prompt
 
 
 class WorkScheduleRepo(SQLAlchemyRepository):
@@ -163,8 +167,12 @@ class TaskRepo(SQLAlchemyRepository):
             select(self.model)
             .where(self.model.id == task_id)
             .options(
-                joinedload(self.model.creator).joinedload(User.position),
-                joinedload(self.model.executor).joinedload(User.position),
+                joinedload(self.model.creator)
+                .joinedload(User.position)
+                .joinedload(Positions.hierarchy_level),
+                joinedload(self.model.executor)
+                .joinedload(User.position)
+                .joinedload(Positions.hierarchy_level),
                 joinedload(self.model.category),
                 joinedload(self.model.control_points),
                 joinedload(self.model.reports),
@@ -220,8 +228,12 @@ class TaskRepo(SQLAlchemyRepository):
     ):
         """Get all tasks with optional filters."""
         stmt = select(self.model).options(
-            joinedload(self.model.creator).joinedload(User.position),
-            joinedload(self.model.executor).joinedload(User.position),
+            joinedload(self.model.creator)
+            .joinedload(User.position)
+            .joinedload(Positions.hierarchy_level),
+            joinedload(self.model.executor)
+            .joinedload(User.position)
+            .joinedload(Positions.hierarchy_level),
             joinedload(self.model.category),
             selectinload(self.model.control_points),
             joinedload(self.model.reports),
@@ -273,6 +285,10 @@ class PositionRepo(SQLAlchemyRepository):
     model = Positions
 
 
+class HierarchyLevelRepo(SQLAlchemyRepository):
+    model = HierarchyLevel
+
+
 class AnalyticsRepo(SQLAlchemyRepository):
     """
     Repository for analytics-related operations.
@@ -294,8 +310,12 @@ class AnalyticsRepo(SQLAlchemyRepository):
         This method can be extended to include more complex analytics queries.
         """
         stmt = select(self.model).options(
-            joinedload(self.model.creator).joinedload(User.position),
-            joinedload(self.model.executor).joinedload(User.position),
+            joinedload(self.model.creator)
+            .joinedload(User.position)
+            .joinedload(Positions.hierarchy_level),
+            joinedload(self.model.executor)
+            .joinedload(User.position)
+            .joinedload(Positions.hierarchy_level),
             joinedload(self.model.category),
             selectinload(self.model.control_points),
             joinedload(self.model.reports),

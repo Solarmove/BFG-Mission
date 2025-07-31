@@ -12,6 +12,7 @@ from bot.db.repositories.repo import (
     UserRepo,
     WorkScheduleRepo,
     PositionRepo,
+    HierarchyLevelRepo,
 )
 
 
@@ -49,6 +50,7 @@ class UnitOfWork(IUnitOfWork):
         self.task_reports = TaskReportRepo(self.session)
         self.task_report_contents = TaskReportContentRepo(self.session)
         self.positions = PositionRepo(self.session)
+        self.hierarchy_level_repo = HierarchyLevelRepo(self.session)
         return self
 
     async def __aexit__(self, exc_type, *args):
