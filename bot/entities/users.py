@@ -10,9 +10,9 @@ class HierarchyLevelRead(BaseModel):
     """Унікальний ідентифікатор рівня ієрархії в базі даних."""
     level: int
     """Назва рівня ієрархії користувача."""
-    prompt: str
+    prompt: str | None = None
     """Промпт для всіх завдань, який використовується"""
-    analytics_prompt: str
+    analytics_prompt: str | None = None
     """Промпт для аналітики, який використовується"""
 
 

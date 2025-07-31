@@ -183,7 +183,20 @@ class TaskRepo(SQLAlchemyRepository):
         if result is None:
             return None
         task_model = TaskReadExtended.model_validate(result, from_attributes=True)
-        return task_model.model_dump() if task_model else None
+        return (
+            task_model.model_dump(
+                exclude={
+                    "creator": {
+                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                    },
+                    "executor": {
+                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                    },
+                },
+            )
+            if task_model
+            else None
+        )
 
     @redis_cache(expiration=30)
     async def get_all_task_simple(

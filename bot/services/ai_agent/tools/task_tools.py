@@ -3,6 +3,8 @@ import datetime
 from aiogram import Bot
 from arq import ArqRedis
 from langchain_core.tools import tool
+
+from bot.db.redis import redis_cache
 from bot.entities.shared import TaskReadExtended
 from bot.entities.task import (
     TaskCreate,
@@ -180,7 +182,6 @@ class TaskTools(BaseTools):
                     exclude={"task_control_points"}
                 )
                 task_id = await self.uow.tasks.add_one(task_data_dict)
-
                 if new_task_data.task_control_points:
                     for control_point in new_task_data.task_control_points:
                         # TODO: додати нотифікації по контрольним точкам
@@ -332,6 +333,44 @@ class TaskTools(BaseTools):
                 await self.uow.commit()
                 return True
 
+        @redis_cache(15)
+        async def get_tasks_func(
+            creator_id: int | None = None,
+            executor_id: int | None = None,
+            category_id: int | None = None,
+            status: TaskStatus | None = None,
+            start_datetime: datetime.datetime | None = None,
+            end_datetime: datetime.datetime | None = None,
+        ):
+            async with self.uow:
+                tasks = await self.uow.tasks.get_all_tasks(
+                    creator_id=creator_id,
+                    executor_id=executor_id,
+                    category_id=category_id,
+                    status=status,
+                    start_datetime=start_datetime,
+                    end_datetime=end_datetime,
+                )
+                return [
+                    TaskReadExtended.model_validate(
+                        task, from_attributes=True
+                    ).model_dump(
+                        exclude={
+                            "creator": {
+                                "position": {
+                                    "hierarchy_level": {"prompt", "analytics_prompt"}
+                                }
+                            },
+                            "executor": {
+                                "position": {
+                                    "hierarchy_level": {"prompt", "analytics_prompt"}
+                                }
+                            },
+                        },
+                    )
+                    for task in tasks
+                ]
+
         @tool
         async def get_tasks(
             creator_id: int | None = None,
@@ -354,19 +393,16 @@ class TaskTools(BaseTools):
             Returns:
                 list[TaskReadExtended]: Список завдань, що відповідають критеріям.
             """
-            async with self.uow:
-                tasks = await self.uow.tasks.get_all_tasks(
-                    creator_id=creator_id,
-                    executor_id=executor_id,
-                    category_id=category_id,
-                    status=status,
-                    start_datetime=start_datetime,
-                    end_datetime=end_datetime,
-                )
-                return [
-                    TaskReadExtended.model_validate(task, from_attributes=True)
-                    for task in tasks
-                ]
+            list_dict_tasks = await get_tasks_func(
+                creator_id=creator_id,
+                executor_id=executor_id,
+                category_id=category_id,
+                status=status,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+            )
+            return [TaskReadExtended.model_validate(task) for task in list_dict_tasks]
+
 
         all_tools = [
             create_one_task,

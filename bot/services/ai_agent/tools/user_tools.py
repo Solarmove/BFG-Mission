@@ -49,12 +49,20 @@ class UserTools(BaseTools):
                     return None
                 return UserReadExtended.model_validate(
                     user, from_attributes=True
-                ).model_dump()
+                ).model_dump(
+                    exclude={
+                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                    },
+                )
             else:
                 user = await self.uow.users.get_user_by_id(user_id=user_id)
                 if not user:
                     return None
-                return UserRead.model_validate(user, from_attributes=True).model_dump()
+                return UserRead.model_validate(user, from_attributes=True).model_dump(
+                    exclude={
+                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                    },
+                )
 
     @redis_cache(15)
     async def get_all_users_dict(self) -> list[UserRead]:
@@ -67,7 +75,11 @@ class UserTools(BaseTools):
         async with self.uow:
             users = await self.uow.users.get_all_users()
             return [
-                UserRead.model_validate(user, from_attributes=True).model_dump()
+                UserRead.model_validate(user, from_attributes=True).model_dump(
+                    exclude={
+                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                    },
+                )
                 for user in users
             ]
 
@@ -82,7 +94,12 @@ class UserTools(BaseTools):
         async with self.uow:
             positions = await self.uow.positions.find_all()
             return [
-                PositionRead.model_validate(position, from_attributes=True).model_dump()
+                PositionRead.model_validate(
+                    position,
+                    from_attributes=True,
+                ).model_dump(
+                    exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+                )
                 for position in positions
             ]
 
@@ -102,7 +119,9 @@ class UserTools(BaseTools):
                 return None
             return PositionRead.model_validate(
                 position, from_attributes=True
-            ).model_dump()
+            ).model_dump(
+                exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+            )
 
     @redis_cache(120)
     async def get_user_position(self, user_id: int) -> PositionRead | None:
@@ -118,7 +137,9 @@ class UserTools(BaseTools):
                 return
             return PositionRead.model_validate(
                 user.position, from_attributes=True
-            ).model_dump()
+            ).model_dump(
+                exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+            )
 
     def get_tools(self) -> UserToolsData:
         @tool
