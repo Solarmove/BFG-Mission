@@ -115,7 +115,7 @@ async def start_ai_agent(
         await ai_agent.clear_history()
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     msg = await msg.edit_text("ㅤ", reply_markup=exit_ai_agent_kb().as_markup())
-    answer_text = await run_ai_generation_with_loader(ai_agent, msg, message_text)
+    answer_text = await run_ai_generation_with_loader(ai_agent, msg, message_text, channel_log)
     msg = await msg.edit_text(answer_text, reply_markup=exit_ai_agent_kb().as_markup())
     state_data.update(call_data=dict(message_id=msg.message_id))
     await state.set_data(state_data)
