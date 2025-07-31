@@ -55,7 +55,7 @@ class CategoryTools(BaseTools):
             async with self.uow:
                 category = await self.uow.task_categories.find_one(id=category_id)
                 if category:
-                    return TaskCategoryRead(id=category.id, name=category.title)
+                    return TaskCategoryRead(id=category.id, name=category.name)
                 return None
 
         @tool
