@@ -4,7 +4,6 @@ import logging
 from aiogram import Bot
 from aiogram.enums import ContentType
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.common import ManagedScroll
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput
@@ -26,7 +25,6 @@ from ...services.task_services import (
     get_overdue_time,
 )
 from ...utils.enum import TaskStatus
-from ...utils.misc import humanize_timedelta
 from ...utils.unitofwork import UnitOfWork
 from . import states
 

@@ -5,12 +5,12 @@ from aiogram_dialog.widgets.kbd import (
 )
 from magic_filter import F
 
-from ..ai_agent_menu_dialogs.states import AIAgentMenu
 from ..categories_menu_dialogs.states import CategoryMenu
 from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ..task_menu_dialogs.states import MyTasks
 from ...i18n.utils.i18n_format import I18nFormat
 from . import on_clicks
+
 
 def main_menu_keyboard():
     return Group(

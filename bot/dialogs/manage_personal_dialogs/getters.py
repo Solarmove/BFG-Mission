@@ -1,6 +1,5 @@
 import datetime
 import calendar
-import locale
 
 from aiogram.enums import ContentType
 from aiogram_dialog import DialogManager  # noqa: F401

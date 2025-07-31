@@ -17,7 +17,7 @@ from bot.db.models.models import (
 from bot.db.redis import redis_cache
 from bot.entities.shared import TaskReadExtended
 from bot.entities.task import TaskRead
-from bot.utils.enum import Role, TaskStatus
+from bot.utils.enum import TaskStatus
 from bot.utils.repository import SQLAlchemyRepository
 
 
@@ -245,7 +245,6 @@ class TaskRepo(SQLAlchemyRepository):
 
     async def get_task_in_work(self, user_id: int):
         """Get the current task for a user."""
-        datetime_now = datetime.datetime.now()
         stmt = (
             select(self.model)
             .where(

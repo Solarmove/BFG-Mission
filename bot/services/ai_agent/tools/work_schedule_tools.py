@@ -3,7 +3,6 @@ from langchain_core.tools import tool
 
 from bot.entities.other import ScheduleCreationResult
 from bot.entities.users import WorkScheduleCreate, WorkScheduleRead, WorkScheduleUpdate
-from bot.services.ai_agent.entities import WorkScheduleToolsData
 from .base import BaseTools
 from ..entities import WorkScheduleToolsData
 

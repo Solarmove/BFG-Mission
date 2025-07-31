@@ -15,15 +15,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableWithMessageHistory, RunnableConfig
 from langchain_core.tools import BaseTool
-from openai import RateLimitError
 from redis.asyncio import Redis
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_random_exponential,
-    AsyncRetrying,
-    retry_if_exception_type,
-)
 
 from bot.services.ai_agent.utils.redis_chat_history import RedisChatMessageHistory
 from bot.services.log_service import LogService
@@ -115,7 +107,7 @@ class AIAgent:
         )
         content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
 
-        log_text = f"<b>Запит до AI агента</b>"
+        log_text = "<b>Запит до AI агента</b>"
         await self.log_service.info(
             log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
         )
@@ -126,7 +118,7 @@ class AIAgent:
         ):
             if "output" in chunk:
                 response_text += self.replace_unallowed_characters(chunk["output"])
-                log_text = f"<b>Відповідь AI агента</b>"
+                log_text = "<b>Відповідь AI агента</b>"
                 await self.log_service.info(
                     log_text,
                     extra_info={

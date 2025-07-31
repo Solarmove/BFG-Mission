@@ -60,7 +60,7 @@ llm = ChatOpenAI(
     max_tokens=1000,
     api_key=config.openai_api_key,
     max_retries=3,
-    streaming=True
+    streaming=True,
 )
 
 

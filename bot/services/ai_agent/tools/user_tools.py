@@ -1,8 +1,7 @@
 from typing import Optional
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardButton, Message, ReplyMarkupUnion
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import Message, ReplyMarkupUnion
 from arq import ArqRedis
 from langchain_core.tools import tool
 
@@ -14,7 +13,6 @@ from bot.keyboards.task import (
     create_show_task_kb,
     create_accept_task_kb,
 )
-from bot.services.ai_agent.entities import UserToolsData
 from bot.utils.unitofwork import UnitOfWork
 
 from .base import BaseTools

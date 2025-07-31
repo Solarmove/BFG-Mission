@@ -86,12 +86,10 @@ send_media_window = Window(
 confirm_complete_task_window = Window(
     Case(
         {
-            True: I18nFormat(
-                "confirm-complete-task-text-control-point"
-            ),
+            True: I18nFormat("confirm-complete-task-text-control-point"),
             False: I18nFormat("confirm-complete-task-text"),
         },
-        selector='control_point_exist',
+        selector="control_point_exist",
     ),
     Button(
         I18nFormat("confirm-btn"),

@@ -234,7 +234,7 @@ def is_completed_in_time_func(
     """Перевіряє, чи завдання або контрольна точка завершено вчасно"""
     if control_point_model:
         return control_point_model.deadline >= date_complete
-    return task_model.end_datetime >=date_complete
+    return task_model.end_datetime >= date_complete
 
 
 def get_overdue_time(

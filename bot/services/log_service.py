@@ -192,7 +192,7 @@ class LogService:
         if extra_info:
             exception_info.update(extra_info)
 
-        message = f"Виникла помилка"
+        message = "Виникла помилка"
         if context:
             message += f" в {context}"
 

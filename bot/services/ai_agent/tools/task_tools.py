@@ -5,20 +5,14 @@ from arq import ArqRedis
 from langchain_core.tools import tool
 from bot.entities.shared import TaskReadExtended
 from bot.entities.task import (
-    TaskCategoryRead,
-    TaskControlPointRead,
     TaskCreate,
     TaskUpdate,
 )
-from bot.entities.users import UserRead
-from bot.keyboards.task import create_accept_task_kb
-from bot.services.ai_agent.entities import TaskToolsData
 from bot.utils.enum import TaskStatus
 from bot.utils.unitofwork import UnitOfWork
 from scheduler.jobs import create_notification_job
 from .base import BaseTools
 from ..entities import TaskToolsData
-from ...mailing_service import send_message
 
 
 class TaskTools(BaseTools):

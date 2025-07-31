@@ -73,5 +73,4 @@ async def on_analytics_click(
     i18n: I18nContext = manager.middleware_data["i18n"]
     await call.message.answer(i18n.get("ai-agent-analytics-text"))
     await state.set_state(AIAgentMenu.send_query)
-    await state.set_data({"agent_type": "analytics"}
-)
+    await state.set_data({"agent_type": "analytics"})

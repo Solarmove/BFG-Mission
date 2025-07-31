@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Router, F, flags, Bot
 from aiogram.enums import ContentType
 from aiogram.fsm.context import FSMContext
@@ -11,7 +9,6 @@ from arq import ArqRedis
 from langchain_openai import ChatOpenAI
 from redis import Redis
 
-from bot.dialogs.ai_agent_menu_dialogs.on_clicks import invoke_ai_agent
 from bot.dialogs.ai_agent_menu_dialogs.states import AIAgentMenu
 from bot.dialogs.main_menu_dialogs.states import MainMenu
 from bot.middleware.throttling import ThrottlingMiddleware
@@ -93,4 +90,3 @@ async def start_ai_agent(
         await ai_agent.clear_history()
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     await run_ai_generation_with_loader(ai_agent, msg, message.text)
-

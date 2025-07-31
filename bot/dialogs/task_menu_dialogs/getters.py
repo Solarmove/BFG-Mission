@@ -1,10 +1,9 @@
 import datetime
-from pprint import pprint
 
 from aiogram.types import User  # noqa: F401
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram_dialog.api.entities import MediaAttachment, MediaId
-from aiogram_dialog.widgets.common import ManagedScroll, ManagedWidget
+from aiogram_dialog.widgets.common import ManagedScroll
 from aiogram_dialog.widgets.kbd import ManagedRadio
 from aiogram_i18n import I18nContext
 
@@ -85,7 +84,6 @@ async def my_tasks_getter(
             start_datetime=datetime.datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0
             ),
-
         )
     elif task_type == "all":
         my_tasks = await uow.tasks.get_all_task_simple(
