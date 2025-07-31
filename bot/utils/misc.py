@@ -1,5 +1,7 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
+
+import pytz
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram.utils.link import create_tg_link
@@ -38,7 +40,8 @@ async def voice_to_text(bot: Bot, message: Message) -> str:
 
 def is_task_hot(task_deadline: datetime) -> bool:
     """Проверяет, горячее ли задание"""
-    current_time = datetime.now()
+    tz_info = pytz.timezone("Europe/Kyiv")
+    current_time = datetime.now(tz_info)
     return task_deadline - current_time <= timedelta(minutes=30)
 
 
