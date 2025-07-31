@@ -47,15 +47,37 @@ async def create_notification_job(
         update_notification (bool): Якщо True, то оновлює існуюче сповіщення, якщо воно вже є.
             Якщо False, то створює нове сповіщення. Якщо сповіщення вже існує - нове сповіщення не буде створено.
     """
+    log_service = LogService()
+
     datetime_now = datetime.datetime.now()
     if _defer_until and datetime_now > _defer_until:
+        await log_service.warning(
+            "Завдання не може бути створено, оскільки час відкладання вже минув.",
+            extra_info={
+                "DEFER_UNTIL": _defer_until,
+                "CURRENT_TIME": datetime_now,
+                "USER_ID": user_id,
+                "TASK_ID": task_id,
+                "NOTIFICATION_FOR": notification_for,
+                "NOTIFICATION_SUBJECT": notification_subject,
+            },
+        )
         return "Завдання не може бути створено, оскільки час відкладання вже минув."
     if _defer_by and _defer_by.total_seconds() < 0:
+        await log_service.warning(
+            "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним.",
+            extra_info={
+                "DEFER_BY": _defer_by,
+                "USER_ID": user_id,
+                "TASK_ID": task_id,
+                "NOTIFICATION_FOR": notification_for,
+                "NOTIFICATION_SUBJECT": notification_subject,
+            },
+        )
         return "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним."
     job_id = (
         f"notification_{notification_for}_{notification_subject}_{user_id}_{task_id}"
     )
-    log_service = LogService()
     if update_notification:
         existing_job = Job(job_id=job_id, redis=redis)
         result = await existing_job.abort()
