@@ -5,6 +5,7 @@ set -e
 cd /app
 
 
+exec uv run alembic revision --autogenerate
 
 # Применяем все миграции
 exec uv run alembic upgrade head
