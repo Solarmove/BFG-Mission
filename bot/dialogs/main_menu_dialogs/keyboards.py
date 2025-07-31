@@ -1,6 +1,7 @@
 from aiogram_dialog.widgets.kbd import (
     Group,
     Start,
+    Button,
 )
 from magic_filter import F
 
@@ -9,15 +10,16 @@ from ..categories_menu_dialogs.states import CategoryMenu
 from ..manage_personal_dialogs.states import ManagePersonalMenu
 from ..task_menu_dialogs.states import MyTasks
 from ...i18n.utils.i18n_format import I18nFormat
-
+from . import on_clicks
 
 def main_menu_keyboard():
     return Group(
-        Start(
+        Button(
             I18nFormat("ai-agent-btn"),
             id="ai_agent",
-            state=AIAgentMenu.send_query,
-            data={'prompt': 'helper'}
+            on_click=on_clicks.on_ai_agent_click,
+            # state=AIAgentMenu.send_query,
+            # data={'prompt': 'helper'}
         ),
         Group(
             Start(
@@ -39,10 +41,9 @@ def main_menu_keyboard():
             ),
             width=2,
         ),
-        Start(
+        Button(
             I18nFormat("analytics-btn"),
             id="analytics",
-            state=AIAgentMenu.send_query,
-            data={'prompt': 'analytics'}
+            on_click=on_clicks.on_analytics_click,
         ),
     )

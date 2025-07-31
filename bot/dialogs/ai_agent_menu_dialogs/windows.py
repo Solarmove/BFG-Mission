@@ -23,12 +23,12 @@ send_query_window = Window(
         selector="prompt",
     ),
     MessageInput(
-        func=on_clicks.on_send_first_message_query,
+        func=on_clicks.on_send_query,
         content_types=[ContentType.TEXT, ContentType.VOICE],
     ),
     Cancel(I18nFormat("back-btn")),
     state=states.AIAgentMenu.send_query,
-    getter=getters.ai_agent_getter,
+    # getter=getters.ai_agent_getter,
     parse_mode=ParseMode.MARKDOWN,
 )
 

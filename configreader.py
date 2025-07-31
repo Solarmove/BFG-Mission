@@ -36,6 +36,7 @@ class DBConfig(BaseSettings):
 class Config(BaseSettings):
     """Main configuration"""
 
+    run_mode: str
     bot_config: BotConfig
     db_config: DBConfig
     admins: list[int]
@@ -60,5 +61,5 @@ class RedisConfig:
         host=config.db_config.redis_host,
         port=config.db_config.redis_port,
         database=config.db_config.redis_db,
-        password=config.db_config.redis_password,
+        password=config.db_config.redis_password if config.run_mode == "prod" else None,
     )

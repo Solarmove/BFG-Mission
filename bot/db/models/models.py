@@ -67,6 +67,20 @@ class User(Base):
     )
 
 
+class HierarchyLevel(Base):
+    __tablename__ = "hierarchy_levels"
+
+    id = mapped_column(BIGINT, primary_key=True, autoincrement=True)
+    level = mapped_column(INTEGER)
+    prompt = mapped_column(TEXT)
+    analytics_prompt = mapped_column(TEXT)
+
+    positions: Mapped[list["Positions"]] = Relationship(
+        back_populates="hierarchy_level",
+        cascade="all, delete-orphan",
+    )
+
+
 class Positions(Base):
     __tablename__ = "positions"
 
@@ -76,7 +90,13 @@ class Positions(Base):
         autoincrement=True,
     )
     title: Mapped[str] = mapped_column(VARCHAR(255), nullable=False, unique=True)
-    hierarchy_level: Mapped[int] = mapped_column(INTEGER, nullable=False)
+    hierarchy_level_id = mapped_column(
+        BIGINT, ForeignKey("hierarchy_levels.id"), nullable=True
+    )
+    hierarchy_level: Mapped["HierarchyLevel"] = Relationship(
+        back_populates="positions",
+    )
+    # hierarchy_level: Mapped[int] = mapped_column(INTEGER, nullable=False)
 
     users: Mapped[list["User"]] = Relationship(
         back_populates="position", cascade="all, delete-orphan"

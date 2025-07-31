@@ -94,7 +94,7 @@ async def show_task_callback(
     if (
         task_model.executor_id != call.from_user.id
         and task_model.creator_id != call.from_user.id
-        and user_model.position.hierarchy_level != 1
+        and user_model.position.hierarchy_level.level != 1
     ):
         await call.answer(i18n.get("task_not_for_you"), show_alert=True)
         return
