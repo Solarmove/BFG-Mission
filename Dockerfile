@@ -19,9 +19,4 @@ ADD . /app
 WORKDIR /app
 RUN uv sync
 
-# Копируем скрипт в образ и делаем его исполняемым
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Теперь entrypoint будет сам выполнять миграции и старт бота
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["uv", "run", "python", "-m", "bot"]
