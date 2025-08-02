@@ -102,14 +102,15 @@ class AIAgent:
         result = await self._agent_with_history.ainvoke(
             input={"input": content}, config=config
         )
+        result_text = self.replace_unallowed_characters(result["output"])
         await self.log_service.info(
             log_text,
             extra_info={
-                "Відповідь": result["output"],
+                "Відповідь": result_text,
                 "Chat ID": self.chat_id,
             },
         )
-        return result["output"]
+        return result_text
 
     @backoff.on_exception(backoff.expo, openai.RateLimitError)
     async def stream_response(self, content: str):
