@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import Router, F, flags, Bot
-from aiogram.enums import ContentType
+from aiogram.enums import ContentType, ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -115,7 +115,25 @@ async def start_ai_agent(
         await ai_agent.clear_history()
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     msg = await msg.edit_text("ㅤ", reply_markup=exit_ai_agent_kb().as_markup())
-    answer_text = await run_ai_generation_with_loader(ai_agent, msg, message_text, channel_log)
-    msg = await msg.edit_text(answer_text, reply_markup=exit_ai_agent_kb().as_markup())
+    answer_text = await run_ai_generation_with_loader(
+        ai_agent, msg, message_text, channel_log
+    )
+    try:
+        msg = await msg.edit_text(
+            answer_text, reply_markup=exit_ai_agent_kb().as_markup()
+        )
+    except TelegramBadRequest:
+        try:
+            msg = await msg.edit_text(
+                answer_text,
+                reply_markup=exit_ai_agent_kb().as_markup(),
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except TelegramBadRequest as e:
+            logger.error("Failed to edit message with Markdown: %s", e)
+            msg = await msg.edit_text(
+                "Виникла помилка. Спробуйте ще раз",
+                reply_markup=exit_ai_agent_kb().as_markup(),
+            )
     state_data.update(call_data=dict(message_id=msg.message_id))
     await state.set_data(state_data)
