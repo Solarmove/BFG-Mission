@@ -1,4 +1,7 @@
 import datetime
+import logging
+from typing import Any, Coroutine
+
 from langchain_core.tools import tool
 
 from bot.entities.other import ScheduleCreationResult
@@ -6,6 +9,7 @@ from bot.entities.users import WorkScheduleCreate, WorkScheduleRead, WorkSchedul
 from .base import BaseTools
 from ..entities import WorkScheduleToolsData
 
+logger = logging.getLogger(__name__)
 
 class WorkScheduleTools(BaseTools):
     """Інструменти для роботи з робочими графіками."""
@@ -87,9 +91,13 @@ class WorkScheduleTools(BaseTools):
                 work_schedule_dict = data.model_dump(
                     exclude_unset=True, exclude_none=True
                 )
-                await self.uow.work_schedules.edit_one(
-                    id=work_schedule_id, data=work_schedule_dict
-                )
+                try:
+                    await self.uow.work_schedules.edit_one(
+                        id=work_schedule_id, data=work_schedule_dict
+                    )
+                except Exception as e:
+                    logger.error('Error updating work schedule: %s', e)
+                    return f"Error updating work schedule: {e}"
                 await self.uow.commit()
 
         @tool
@@ -100,13 +108,18 @@ class WorkScheduleTools(BaseTools):
             :param work_schedule_id: ID робочого графіку, який потрібно видалити.
             """
             async with self.uow:
-                await self.uow.work_schedules.delete_one(id=work_schedule_id)
+                try:
+                    await self.uow.work_schedules.delete_one(id=work_schedule_id)
+                except Exception as e:
+                    logger.error('Error deleting work schedule: %s', e)
+                    return f"Error deleting work schedule: {e}"
                 await self.uow.commit()
+                return None
 
         @tool
         async def create_work_schedule(
             work_schedule_data_list: list[WorkScheduleCreate],
-        ) -> ScheduleCreationResult:
+        ) -> str | ScheduleCreationResult:
             """
             Створити новий робочий графік користувача.
 
@@ -127,16 +140,24 @@ class WorkScheduleTools(BaseTools):
                     )
                     if not work_schedule_exists:
                         work_schedule_dict = work_schedule_data.model_dump()
-                        await self.uow.work_schedules.add_one(work_schedule_dict)
+                        try:
+                            await self.uow.work_schedules.add_one(work_schedule_dict)
+                        except Exception as e:
+                            logger.error('Error creating work schedule: %s', e)
+                            return f"Error creating work schedule: {e}"
                         await self.uow.commit()
                         schedules_created += 1
                     else:
-                        await self.uow.work_schedules.edit_one(
-                            id=work_schedule_exists.id,
-                            data=work_schedule_data.model_dump(
-                                exclude_unset=True, exclude_none=True
-                            ),
-                        )
+                        try:
+                            await self.uow.work_schedules.edit_one(
+                                id=work_schedule_exists.id,
+                                data=work_schedule_data.model_dump(
+                                    exclude_unset=True, exclude_none=True
+                                ),
+                            )
+                        except Exception as e:
+                            logger.error('Error updating existing work schedule: %s', e)
+                            return f"Error updating existing work schedule: {e}"
                 return ScheduleCreationResult(
                     created_count=schedules_created,
                     existing_count=schedules_exists,

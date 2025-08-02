@@ -1,9 +1,14 @@
+import logging
+from typing import Any, Coroutine
+
 from langchain_core.tools import tool
 
 from bot.db.redis import redis_cache
 from bot.entities.task import TaskCategoryRead
 from .base import BaseTools
 from ..entities import CategoryToolsData
+
+logger = logging.getLogger(__name__)
 
 
 class CategoryTools(BaseTools):
@@ -59,7 +64,7 @@ class CategoryTools(BaseTools):
                 return None
 
         @tool
-        async def create_category(category_name: str) -> TaskCategoryRead:
+        async def create_category(category_name: str) -> str | TaskCategoryRead:
             """
             Створити нову категорію завдання.
 
@@ -70,7 +75,12 @@ class CategoryTools(BaseTools):
             """
             async with self.uow:
                 category_data = {"name": category_name}
-                category_id = await self.uow.task_categories.add_one(category_data)
+                try:
+                    category_id = await self.uow.task_categories.add_one(category_data)
+                except Exception as e:
+                    logger.error(f"Error creating task category: {e}")
+                    return f"Error creating task category: {e}"
+
                 await self.uow.commit()
                 return TaskCategoryRead(id=category_id, name=category_name)
 
@@ -82,8 +92,14 @@ class CategoryTools(BaseTools):
             :param category_id: ID категорії завдання, яку потрібно видалити.
             """
             async with self.uow:
-                await self.uow.task_categories.delete_one(id=category_id)
+                try:
+                    await self.uow.task_categories.delete_one(id=category_id)
+                except Exception as e:
+                    logger.error(f"Error deleting task category: {e}")
+                    return f"Error deleting task category: {e}"
+
                 await self.uow.commit()
+                return None
 
         all_tools = [
             get_categories_from_db,

@@ -1,4 +1,6 @@
 import datetime
+import logging
+from typing import Any, Coroutine
 
 import pytz
 from aiogram import Bot
@@ -16,6 +18,8 @@ from bot.utils.unitofwork import UnitOfWork
 from scheduler.jobs import create_notification_job
 from .base import BaseTools
 from ..entities import TaskToolsData
+
+logger = logging.getLogger(__name__)
 
 
 class TaskTools(BaseTools):
@@ -166,9 +170,7 @@ class TaskTools(BaseTools):
 
     def get_tools(self) -> TaskToolsData:
         @tool
-        async def create_one_task(
-            new_task_data: TaskCreate
-        ):
+        async def create_one_task(new_task_data: TaskCreate):
             """
             Создает новою задачу для пользователя.
 
@@ -176,7 +178,7 @@ class TaskTools(BaseTools):
 
             :return: The ID of the created task.
             """
-            tz_info = pytz.timezone('Europe/Kyiv')
+            tz_info = pytz.timezone("Europe/Kyiv")
             new_task_data.start_datetime.replace(tzinfo=tz_info)
             new_task_data.end_datetime.replace(tzinfo=tz_info)
             task_id = None
@@ -184,13 +186,25 @@ class TaskTools(BaseTools):
                 task_data_dict = new_task_data.model_dump(
                     exclude={"task_control_points"}
                 )
-                task_id = await self.uow.tasks.add_one(task_data_dict)
+                try:
+                    task_id = await self.uow.tasks.add_one(task_data_dict)
+                except Exception as e:
+                    logger.error(f"Error creating task: {e}")
+                    await self.uow.rollback()
+                    return f"Error creating task: {e}"
                 if new_task_data.task_control_points:
                     for control_point in new_task_data.task_control_points:
                         # TODO: додати нотифікації по контрольним точкам
                         control_point_data = control_point.model_dump()
                         control_point_data["task_id"] = task_id
-                        await self.uow.task_control_points.add_one(control_point_data)
+                        try:
+                            await self.uow.task_control_points.add_one(
+                                control_point_data
+                            )
+                        except Exception as e:
+                            logger.error(f"Error creating control point: {e}")
+                            await self.uow.rollback()
+                            return f"Error creating control point: {e}"
                 await self.uow.commit()
             await self.create_notification_task_ending_soon(
                 task_id=task_id,
@@ -232,7 +246,12 @@ class TaskTools(BaseTools):
                     task_data_dict = new_task.model_dump(
                         exclude={"task_control_points"}
                     )
-                    task_id = await self.uow.tasks.add_one(task_data_dict)
+                    try:
+                        task_id = await self.uow.tasks.add_one(task_data_dict)
+                    except Exception as e:
+                        logger.error(f"Error creating task: {e}")
+                        await self.uow.rollback()
+                        return f"Error creating task: {e}"
                     created_task_ids.append(task_id)
                     await self.create_notification_task_ending_soon(
                         task_id=task_id,
@@ -255,10 +274,15 @@ class TaskTools(BaseTools):
                         for control_point in new_task.task_control_points:
                             control_point_data = control_point.model_dump()
                             control_point_data["task_id"] = task_id
-                            await self.uow.task_control_points.add_one(
-                                control_point_data
-                            )
-                            # TODO: додати нотифікації по контрольним точкам
+                            try:
+                                await self.uow.task_control_points.add_one(
+                                    control_point_data
+                                )
+                            except Exception as e:
+                                logger.error(f"Error creating control point: {e}")
+                                await self.uow.rollback()
+                                return f"Error creating control point: {e}"
+
                 await self.uow.commit()
                 return created_task_ids
 
@@ -272,7 +296,7 @@ class TaskTools(BaseTools):
             Returns:
                 bool: True, якщо завдання були успішно оновлені, False в іншому випадку.
             """
-            tz_info = pytz.timezone('Europe/Kyiv')
+            tz_info = pytz.timezone("Europe/Kyiv")
             async with self.uow:
                 for task_data in updates_list:
                     if task_data.start_datetime:
@@ -282,7 +306,12 @@ class TaskTools(BaseTools):
                     task_dict = task_data.model_dump(
                         exclude_unset=True, exclude_none=True, exclude={"id"}
                     )
-                    await self.uow.tasks.edit_one(id=task_data.id, data=task_dict)
+                    try:
+                        await self.uow.tasks.edit_one(id=task_data.id, data=task_dict)
+                    except Exception as e:
+                        logger.error(f"Error updating task: {e}")
+                        await self.uow.rollback()
+                        return f"Error updating task: {e}"
 
                 await self.uow.commit()
                 for task_data in updates_list:
@@ -314,7 +343,7 @@ class TaskTools(BaseTools):
                 return True
 
         @tool
-        async def delete_task(task_id: int) -> bool:
+        async def delete_task(task_id: int) -> str | bool:
             """
             Видалити завдання за його ID.
 
@@ -324,12 +353,17 @@ class TaskTools(BaseTools):
                 bool: True, якщо завдання було успішно видалено, False в іншому випадку.
             """
             async with self.uow:
-                await self.uow.tasks.delete_one(id=task_id)
+                try:
+                    await self.uow.tasks.delete_one(id=task_id)
+                except Exception as e:
+                    logger.error(f"Error deleting task: {e}")
+                    await self.uow.rollback()
+                    return f"Error deleting task: {e}"
                 await self.uow.commit()
                 return True
 
         @tool
-        async def delete_many_tasks(task_ids: list[int]) -> bool:
+        async def delete_many_tasks(task_ids: list[int]) -> str | bool:
             """
             Видалити кілька завдань за їх ID.
 
@@ -340,7 +374,12 @@ class TaskTools(BaseTools):
             """
             async with self.uow:
                 for task_id in task_ids:
-                    await self.uow.tasks.delete_one(id=task_id)
+                    try:
+                        await self.uow.tasks.delete_one(id=task_id)
+                    except Exception as e:
+                        logger.error(f"Error deleting task {task_id}: {e}")
+                        await self.uow.rollback()
+                        return f"Error deleting task {task_id}: {e}"
                 await self.uow.commit()
                 return True
 
