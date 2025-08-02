@@ -94,9 +94,20 @@ class AIAgent:
         config = RunnableConfig(
             configurable={"session_id": str(self.chat_id or "default")}
         )
-        content += f"\n\nMy id: {self.chat_id}"
+        content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
+        log_text = "<b>Запит до AI агента</b>"
+        await self.log_service.info(
+            log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
+        )
         result = await self._agent_with_history.ainvoke(
             input={"input": content}, config=config
+        )
+        await self.log_service.info(
+            log_text,
+            extra_info={
+                "Відповідь": result["output"],
+                "Chat ID": self.chat_id,
+            },
         )
         return result["output"]
 
