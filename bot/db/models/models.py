@@ -72,7 +72,10 @@ class HierarchyLevel(Base):
 
     id = mapped_column(BIGINT, primary_key=True, autoincrement=True)
     level = mapped_column(INTEGER)
-    prompt = mapped_column(TEXT)
+    create_task_prompt = mapped_column(TEXT)
+    manage_task_prompt = mapped_column(TEXT)
+    work_schedule_prompt = mapped_column(TEXT)
+    category_prompt = mapped_column(TEXT)
     analytics_prompt = mapped_column(TEXT)
 
     positions: Mapped[list["Positions"]] = Relationship(
@@ -97,7 +100,6 @@ class Positions(Base):
         back_populates="positions",
     )
     # hierarchy_level: Mapped[int] = mapped_column(INTEGER, nullable=False)
-
     users: Mapped[list["User"]] = Relationship(
         back_populates="position", cascade="all, delete-orphan"
     )

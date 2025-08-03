@@ -3,7 +3,6 @@ from . import windows  # noqa: F401
 
 
 dialogs = [
-    Dialog(windows.manage_personal_window),
     Dialog(
         windows.create_reg_link_window,
         windows.show_link,

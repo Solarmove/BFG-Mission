@@ -22,6 +22,13 @@ from ...utils.enum import TaskStatus
 def select_type_of_task_keyboard():
     return Group(
         Row(
+            Button(
+                I18nFormat("ai-agent-btn"),
+                id="ai_agent",
+                on_click=on_clicks.on_ai_agent_click,
+            ),
+        ),
+        Row(
             Radio(
                 unchecked_text=Format("⚪️{item[1]}"),
                 checked_text=Format("🔘{item[1]}"),
@@ -109,7 +116,9 @@ def action_with_task_keyboard():
             width=1,
             height=6,
             hide_on_single_page=True,
-            when="control_points_list",
+            when=F["control_points_list"]
+            & F["task_status"].in_([TaskStatus.IN_PROGRESS])
+            & F["am_i_executor"],
         ),
     )
 

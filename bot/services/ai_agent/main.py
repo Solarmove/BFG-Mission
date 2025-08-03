@@ -28,9 +28,9 @@ class AIAgent:
     def __init__(
         self,
         model: BaseChatModel,
-        tools: Sequence[BaseTool],
         prompt: ChatPromptTemplate,
         log_service: LogService,
+        tools: Sequence[BaseTool],
         chat_id: int | None = None,
         redis_client: Redis | None = None,
     ):
@@ -90,18 +90,26 @@ class AIAgent:
         # Находим все HTML-теги и заменяем неразрешённые на ''
         return re.sub(r"</?[\w\d]+[^>]*>", replacer, content)
 
-    async def invoke(self, content: str):
+    async def invoke(
+        self, content: str, with_history: bool = True, without_user_id: bool = False
+    ):
         config = RunnableConfig(
             configurable={"session_id": str(self.chat_id or "default")}
         )
-        content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
+        if not without_user_id:
+            content += f"\n\nМій user_id: {self.chat_id} (ID в базі данних)"
         log_text = "<b>Запит до AI агента</b>"
         await self.log_service.info(
             log_text, extra_info={"Контент": content, "Chat ID": self.chat_id}
         )
-        result = await self._agent_with_history.ainvoke(
-            input={"input": content}, config=config
-        )
+        if with_history:
+            result = await self._agent_with_history.ainvoke(
+                input={"input": content}, config=config
+            )
+        else:
+            result = await self._agent_executor.ainvoke(
+                input={"input": content}, config=config
+            )
         result_text = self.replace_unallowed_characters(result["output"])
         await self.log_service.info(
             log_text,

@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Literal, TypeAlias, Any, Coroutine
+from typing import Literal, TypeAlias
 
 import pytz
 from arq import ArqRedis
@@ -12,7 +12,7 @@ from bot.services.log_service import LogService
 logger = logging.getLogger(__name__)
 
 NOTIFICATION_SUBJECTS: TypeAlias = Literal[
-    "task_ending_soon", "task_overdue", "task_started", "task_updated"
+    "task_ending_soon", "task_overdue", "task_started", "task_updated", "task_created"
 ]
 
 NOTIFICATION_FOR: TypeAlias = Literal["creator", "executor"]
@@ -51,7 +51,8 @@ async def create_notification_job(
     log_service = LogService()
     tz_info = pytz.timezone("Europe/Kyiv")
     datetime_now = datetime.datetime.now(tz_info)
-    if _defer_until and datetime_now > _defer_until:
+
+    if _defer_until and datetime_now > _defer_until.replace(tzinfo=tz_info):
         await log_service.warning(
             "Завдання не може бути створено, оскільки час відкладання вже минув.",
             extra_info={
@@ -94,7 +95,7 @@ async def create_notification_job(
         await arq.enqueue_job(
             "send_notification",
             _job_id=job_id,
-            _defer_until=_defer_until,
+            _defer_until=_defer_until.replace(tzinfo=tz_info) if _defer_until else None,
             _defer_by=_defer_by,
             user_id=user_id,
             task_id=task_id,

@@ -10,8 +10,12 @@ class HierarchyLevelRead(BaseModel):
     """Унікальний ідентифікатор рівня ієрархії в базі даних."""
     level: int
     """Назва рівня ієрархії користувача."""
-    prompt: str | None = None
-    """Промпт для всіх завдань, який використовується"""
+    create_task_prompt: str | None = None
+    """Промпт для завдання, який використовується"""
+    work_schedule_prompt: str | None = None
+    """Промпт для робочого графіку, який використовується"""
+    category_prompt: str | None = None
+    """Промпт для категорії, який використовується"""
     analytics_prompt: str | None = None
     """Промпт для аналітики, який використовується"""
 

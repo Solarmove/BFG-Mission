@@ -40,6 +40,12 @@ async def send_task_overdue_notification(
     bot: Bot,
     user_id: int,
 ):
+    executor_full_name = "Без виконавця"
+    if task_model_extended.executor:
+        executor_full_name = (
+            task_model_extended.executor.full_name
+            or task_model_extended.executor.full_name_tg
+        )
     if task_model_extended.status == TaskStatus.OVERDUE:
         logger.info(f"Unnecessary notification for task {task_model_extended.id} ")
         return
@@ -50,7 +56,7 @@ async def send_task_overdue_notification(
     }
     kwargs_dict = {
         "creator": {
-            "executor_full_name": task_model_extended.executor.full_name,
+            "executor_full_name": executor_full_name,
             "task_title": task_model_extended.title,
         },
         "executor": {
@@ -107,6 +113,58 @@ async def send_task_updated_notification(
     await send_message(
         bot,
         task_model_extended.executor_id,
+        message_text,
+        reply_markup=create_show_task_kb(task_id=task_model_extended.id),
+    )
+
+
+async def send_task_created_notification(
+    task_model_extended: TaskReadExtended,
+    core: FluentRuntimeCore,
+    bot: Bot,
+):
+    user_id = task_model_extended.executor_id
+    locale = await get_user_locale(user_id)
+    creator_name = "Без творця"
+    executor_name = "Без виконавця"
+    if task_model_extended.creator:
+        creator_name = (
+            task_model_extended.creator.full_name
+            or task_model_extended.creator.full_name_tg
+        )
+    if task_model_extended.executor:
+        executor_name = (
+            task_model_extended.executor.full_name
+            or task_model_extended.executor.full_name_tg
+        )
+    message_text = core.get(
+        "task_created_notification",
+        locale,
+        task_title=task_model_extended.title,
+        task_category=task_model_extended.category.name
+        if task_model_extended.category
+        else "Без категорії",
+        task_creator=creator_name,
+        task_executor=executor_name,
+        task_start_datetime=task_model_extended.start_datetime.strftime(
+            "%Y-%m-%d %H:%M"
+        ),
+        task_end_datetime=task_model_extended.end_datetime.strftime("%Y-%m-%d %H:%M"),
+        control_points="".join(
+            [
+                f"\n{cp.description} - {cp.deadline.strftime('%Y-%m-%d %H:%M')}"
+                for cp in task_model_extended.control_points
+            ]
+        )
+        if task_model_extended.control_points
+        else "Немає",
+        task_photo_required="Так" if task_model_extended.photo_required else "Ні",
+        task_video_required="Так" if task_model_extended.video_required else "Ні",
+        task_file_required="Так" if task_model_extended.file_required else "Ні",
+    )
+    await send_message(
+        bot,
+        user_id,
         message_text,
         reply_markup=create_show_task_kb(task_id=task_model_extended.id),
     )

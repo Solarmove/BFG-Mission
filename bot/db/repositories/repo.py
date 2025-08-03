@@ -103,7 +103,7 @@ class UserRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
-    @redis_cache(expiration=60)
+    # @redis_cache(expiration=60)
     async def get_user_hierarchy_prompt(self, user_id: int):
         """Get the hierarchy level of a user."""
         user = await self.session.get(
@@ -116,7 +116,7 @@ class UserRepo(SQLAlchemyRepository):
         if not user or not user.position or not user.position.hierarchy_level:
             return None
         hl = user.position.hierarchy_level
-        return hl.prompt, hl.analytics_prompt
+        return hl
 
 
 class WorkScheduleRepo(SQLAlchemyRepository):
@@ -189,10 +189,20 @@ class TaskRepo(SQLAlchemyRepository):
             task_model.model_dump(
                 exclude={
                     "creator": {
-                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                        "position": {"hierarchy_level": {
+                                "create_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }}
                     },
                     "executor": {
-                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                        "position": {"hierarchy_level": {
+                                "create_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }}
                     },
                 },
             )

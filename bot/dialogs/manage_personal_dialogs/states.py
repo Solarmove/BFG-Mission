@@ -1,12 +1,4 @@
-from aiogram.fsm.state import StatesGroup, State  # noqa: F401
-
-
-class ManagePersonalMenu(StatesGroup):
-    """
-    State group for managing personal menu.
-    """
-
-    select_action = State()  # Main menu state for personal management
+from aiogram.fsm.state import StatesGroup, State
 
 
 class CreateRegLink(StatesGroup):

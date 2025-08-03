@@ -12,6 +12,7 @@ from scheduler.services import (
     send_task_overdue_notification,
     send_task_started_notification,
     send_task_updated_notification,
+    send_task_created_notification,
 )
 
 logging.basicConfig(
@@ -85,3 +86,10 @@ async def send_notification(
                 core=core,
                 bot=bot,
             )
+        elif notification_subject == "task_created":
+            await send_task_created_notification(
+                task_model_extended=task_model_extended,
+                core=core,
+                bot=bot,
+            )
+

@@ -23,10 +23,8 @@ from ...mailing_service import send_message
 class UserTools(BaseTools):
     """Інструменти для роботи з користувачами."""
 
-    def __init__(self, uow: UnitOfWork, arq: ArqRedis, bot: Bot):
-        super().__init__(uow, arq)
-        self.uow = uow
-        self.arq = arq
+    def __init__(self, uow: UnitOfWork, arq: ArqRedis, user_id: int, bot: Bot):
+        super().__init__(uow, arq, user_id)
         self.bot = bot
 
     @redis_cache(15)
@@ -51,7 +49,15 @@ class UserTools(BaseTools):
                     user, from_attributes=True
                 ).model_dump(
                     exclude={
-                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                        "position": {
+                            "hierarchy_level": {
+                                "create_task_prompt",
+                                "manage_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }
+                        }
                     },
                 )
             else:
@@ -60,7 +66,15 @@ class UserTools(BaseTools):
                     return None
                 return UserRead.model_validate(user, from_attributes=True).model_dump(
                     exclude={
-                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                        "position": {
+                            "hierarchy_level": {
+                                "create_task_prompt",
+                                "manage_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }
+                        }
                     },
                 )
 
@@ -77,7 +91,15 @@ class UserTools(BaseTools):
             return [
                 UserRead.model_validate(user, from_attributes=True).model_dump(
                     exclude={
-                        "position": {"hierarchy_level": {"prompt", "analytics_prompt"}}
+                        "position": {
+                            "hierarchy_level": {
+                                "create_task_prompt",
+                                "manage_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }
+                        }
                     },
                 )
                 for user in users
@@ -98,7 +120,15 @@ class UserTools(BaseTools):
                     position,
                     from_attributes=True,
                 ).model_dump(
-                    exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+                    exclude={
+                        "hierarchy_level": {
+                            "create_task_prompt",
+                            "manage_task_prompt",
+                            "work_schedule_prompt",
+                            "category_prompt",
+                            "analytics_prompt",
+                        }
+                    },
                 )
                 for position in positions
             ]
@@ -120,7 +150,15 @@ class UserTools(BaseTools):
             return PositionRead.model_validate(
                 position, from_attributes=True
             ).model_dump(
-                exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+                exclude={
+                    "hierarchy_level": {
+                        "create_task_prompt",
+                        "manage_task_prompt",
+                        "work_schedule_prompt",
+                        "category_prompt",
+                        "analytics_prompt",
+                    }
+                },
             )
 
     @redis_cache(120)
@@ -138,10 +176,18 @@ class UserTools(BaseTools):
             return PositionRead.model_validate(
                 user.position, from_attributes=True
             ).model_dump(
-                exclude={"hierarchy_level": {"prompt", "analytics_prompt"}},
+                exclude={
+                    "hierarchy_level": {
+                        "create_task_prompt",
+                        "manage_task_prompt",
+                        "work_schedule_prompt",
+                        "category_prompt",
+                        "analytics_prompt",
+                    }
+                },
             )
 
-    def get_tools(self) -> UserToolsData:
+    def get_tools(self) -> list:
         @tool
         async def get_positions(self):
             """
@@ -270,14 +316,4 @@ class UserTools(BaseTools):
             send_message_func,
             get_user_hierarchy,
         ]
-        analytics_tools = [
-            get_all_users_from_db,
-            get_user_by_id,
-            get_user_hierarchy,
-            create_reply_markup_for_show_task,
-            send_message_func,
-        ]
-        return UserToolsData(
-            all_tools=all_tools,
-            analytics_tools=analytics_tools,
-        )
+        return all_tools

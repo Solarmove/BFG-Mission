@@ -3,26 +3,14 @@ from aiogram_dialog.widgets.kbd import (
     ScrollingGroup,
     Select,
     Start,
+    Row,
+    Button,
 )  # noqa: F401
 from aiogram_dialog.widgets.text import Format
 
 from . import on_clicks, states  # noqa: F401
 from ...i18n.utils.i18n_format import I18nFormat
 
-
-def manage_personal_dialogs_keyboard():
-    return Group(
-        Start(
-            I18nFormat("create-reg-link-btn"),
-            id="create_reg_link",
-            state=states.CreateRegLink.select_position,
-        ),
-        Start(
-            I18nFormat("manage-work-schedule-btn"),
-            id="manage_work_schedule",
-            state=states.ManageWorkSchedule.select_action,
-        ),
-    )
 
 
 def select_position_keyboard():
@@ -43,15 +31,25 @@ def select_position_keyboard():
 
 def manage_work_schedule_keyboard():
     return Group(
-        Start(
-            I18nFormat("load-schedule-btn"),
-            id="load_schedule",
-            state=states.ChangeWorkSchedule.select_month,
+        Row(
+            Button(
+                I18nFormat("ai-agent-btn"),
+                id="work_scheduler_with_ai_agent",
+                on_click=on_clicks.on_start_ai_agent,
+            ),
         ),
-        Start(
-            I18nFormat("show-schedule-btn"),
-            id="show_schedule",
-            state=states.ShowSchedule.select_month,
+        Group(
+            Start(
+                I18nFormat("load-schedule-btn"),
+                id="load_schedule",
+                state=states.ChangeWorkSchedule.select_month,
+            ),
+            Start(
+                I18nFormat("show-schedule-btn"),
+                id="show_schedule",
+                state=states.ShowSchedule.select_month,
+            ),
+            width=2,
         ),
     )
 

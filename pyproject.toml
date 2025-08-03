@@ -19,6 +19,7 @@ dependencies = [
     "langchain>=0.3.26",
     "langchain-community>=0.3.27",
     "langchain-openai>=0.3.28",
+    "mypy>=1.11",
     "openai>=1.97.1",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",

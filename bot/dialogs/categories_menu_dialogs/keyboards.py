@@ -7,6 +7,7 @@ from aiogram_dialog.widgets.kbd import (
     ScrollingGroup,
     Select,
     Start,
+    Button,
 )  # noqa: F401
 from aiogram_dialog.widgets.text import Format
 
@@ -17,13 +18,18 @@ from ...i18n.utils.i18n_format import I18nFormat
 def category_menu_keyboard():
     return Group(
         Column(
+            Button(
+                I18nFormat("ai-agent-btn"),
+                id="ai_agent_category",
+                on_click=on_clicks.on_start_ai_agent,
+            ),
+        ),
+        Group(
             Start(
                 I18nFormat("create-category-btn"),
                 id="on_create_category",
                 state=states.CreateCategory.enter_category_name,
             ),
-        ),
-        Row(
             Start(
                 I18nFormat("edit-category-btn"),
                 id="on_edit_category",
@@ -34,6 +40,7 @@ def category_menu_keyboard():
                 id="on_delete_category",
                 state=states.DeleteCategory.select_category,
             ),
+            width=2,
         ),
     )
 

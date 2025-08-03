@@ -32,7 +32,7 @@ class CategoryTools(BaseTools):
                 for category in categories
             ]
 
-    def get_tools(self) -> CategoryToolsData:
+    def get_tools(self) -> list:
         @tool
         async def get_categories_from_db() -> list[TaskCategoryRead]:
             """
@@ -91,6 +91,13 @@ class CategoryTools(BaseTools):
 
             :param category_id: ID категорії завдання, яку потрібно видалити.
             """
+            user_level = await self.get_user_hierarchy_level()
+            if user_level > 3:
+                logger.warning(
+                    "User with ID %s has insufficient permissions to delete task categories.",
+                    self.user_id,
+                )
+                return "You do not have permission to delete task categories."
             async with self.uow:
                 try:
                     await self.uow.task_categories.delete_one(id=category_id)
@@ -101,14 +108,9 @@ class CategoryTools(BaseTools):
                 await self.uow.commit()
                 return None
 
-        all_tools = [
+        return [
             get_categories_from_db,
             get_category_by_id,
             create_category,
             delete_category,
         ]
-        analytics_tools = [
-            get_categories_from_db,
-            get_category_by_id,
-        ]
-        return CategoryToolsData(all_tools=all_tools, analytics_tools=analytics_tools)

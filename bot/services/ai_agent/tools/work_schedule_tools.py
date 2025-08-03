@@ -1,9 +1,11 @@
 import datetime
 import logging
-from typing import Any, Coroutine
+from typing import Any, Coroutine, Callable
 
-from langchain_core.tools import tool
+from langchain_core.runnables import Runnable
+from langchain_core.tools import tool, BaseTool
 
+from bot.db.models.models import WorkSchedule
 from bot.entities.other import ScheduleCreationResult
 from bot.entities.users import WorkScheduleCreate, WorkScheduleRead, WorkScheduleUpdate
 from .base import BaseTools
@@ -11,15 +13,18 @@ from ..entities import WorkScheduleToolsData
 
 logger = logging.getLogger(__name__)
 
+
 class WorkScheduleTools(BaseTools):
     """Інструменти для роботи з робочими графіками."""
 
-    def get_tools(self) -> WorkScheduleToolsData:
+    def get_tools(
+        self,
+    ) -> list:
         @tool
         async def get_all_work_schedulers_from_db(
             date_from: datetime.datetime | None = None,
             date_to: datetime.datetime | None = None,
-        ) -> list[WorkScheduleRead]:
+        ) -> str | list[WorkScheduleRead]:
             """
             Отримати всі робочі графіки з бази даних.
             Якщо список порожній - графіків немає.
@@ -30,6 +35,13 @@ class WorkScheduleTools(BaseTools):
             Returns:
                 list: List of all work schedules.
             """
+            user_level = await self.get_user_hierarchy_level(self.user_id)
+            if user_level > 3:
+                logger.warning(
+                    "User with ID %s has insufficient permissions to access work schedules.",
+                    self.user_id,
+                )
+                return "You do not have permission to access work schedules."
             if not date_from:
                 date_from = datetime.datetime.now().replace(
                     day=1, hour=0, minute=0, second=0, microsecond=0
@@ -57,7 +69,9 @@ class WorkScheduleTools(BaseTools):
                 return work_schedules_list
 
         @tool
-        async def get_work_schedule_in_user(user_id: int) -> list[WorkScheduleRead]:
+        async def get_work_schedule_in_user(
+            user_id: int,
+        ) -> list[WorkScheduleRead] | str:
             """
             Отримати робочий графік користувача за його ID.
 
@@ -66,6 +80,15 @@ class WorkScheduleTools(BaseTools):
             Returns:
                 WorkScheduleRead: Робочий графік користувача.
             """
+            if (
+                user_id != self.user_id
+                and await self.get_user_hierarchy_level(user_id=user_id) > 3
+            ):
+                logger.warning(
+                    "User with ID %s has insufficient permissions to access their own work schedule.",
+                    user_id,
+                )
+                return "You do not have permission to access your own work schedule."
             async with self.uow:
                 work_schedule = await self.uow.work_schedules.find_all(user_id=user_id)
                 return [
@@ -87,7 +110,16 @@ class WorkScheduleTools(BaseTools):
             :param work_schedule_id: ID робочого графіку, який потрібно оновити.
             :param data: WorkScheduleUpdate instance containing the new data for the work schedule.
             """
+
             async with self.uow:
+                if await self.get_user_hierarchy_level(user_id=self.user_id) > 3:
+                    logger.warning(
+                        "User with ID %s has insufficient permissions to update their own work schedule.",
+                        self.user_id,
+                    )
+                    return (
+                        "You do not have permission to update your own work schedule."
+                    )
                 work_schedule_dict = data.model_dump(
                     exclude_unset=True, exclude_none=True
                 )
@@ -96,9 +128,10 @@ class WorkScheduleTools(BaseTools):
                         id=work_schedule_id, data=work_schedule_dict
                     )
                 except Exception as e:
-                    logger.error('Error updating work schedule: %s', e)
+                    logger.error("Error updating work schedule: %s", e)
                     return f"Error updating work schedule: {e}"
                 await self.uow.commit()
+                return None
 
         @tool
         async def delete_work_schedule(work_schedule_id: int):
@@ -108,10 +141,18 @@ class WorkScheduleTools(BaseTools):
             :param work_schedule_id: ID робочого графіку, який потрібно видалити.
             """
             async with self.uow:
+                if await self.get_user_hierarchy_level(user_id=self.user_id) > 3:
+                    logger.warning(
+                        "User with ID %s has insufficient permissions to delete their own work schedule.",
+                        self.user_id,
+                    )
+                    return (
+                        "You do not have permission to delete your own work schedule."
+                    )
                 try:
                     await self.uow.work_schedules.delete_one(id=work_schedule_id)
                 except Exception as e:
-                    logger.error('Error deleting work schedule: %s', e)
+                    logger.error("Error deleting work schedule: %s", e)
                     return f"Error deleting work schedule: {e}"
                 await self.uow.commit()
                 return None
@@ -131,9 +172,14 @@ class WorkScheduleTools(BaseTools):
             """
             schedules_exists = 0
             schedules_created = 0
+            if await self.get_user_hierarchy_level(user_id=self.user_id) > 3:
+                logger.warning(
+                    "User with ID %s has insufficient permissions to create work schedules.",
+                    self.user_id,
+                )
+                return "You do not have permission to create work schedules."
             async with self.uow:
                 for work_schedule_data in work_schedule_data_list:
-                    # Check if the work schedule already exists
                     work_schedule_exists = await self.uow.work_schedules.find_one(
                         user_id=work_schedule_data.user_id,
                         date=work_schedule_data.date,
@@ -143,7 +189,7 @@ class WorkScheduleTools(BaseTools):
                         try:
                             await self.uow.work_schedules.add_one(work_schedule_dict)
                         except Exception as e:
-                            logger.error('Error creating work schedule: %s', e)
+                            logger.error("Error creating work schedule: %s", e)
                             return f"Error creating work schedule: {e}"
                         await self.uow.commit()
                         schedules_created += 1
@@ -156,25 +202,17 @@ class WorkScheduleTools(BaseTools):
                                 ),
                             )
                         except Exception as e:
-                            logger.error('Error updating existing work schedule: %s', e)
+                            logger.error("Error updating existing work schedule: %s", e)
                             return f"Error updating existing work schedule: {e}"
                 return ScheduleCreationResult(
                     created_count=schedules_created,
                     existing_count=schedules_exists,
                 )
 
-        all_tools = [
+        return [
             get_all_work_schedulers_from_db,
             get_work_schedule_in_user,
             update_work_schedule,
             delete_work_schedule,
             create_work_schedule,
         ]
-        analytics_tools = [
-            get_all_work_schedulers_from_db,
-            get_work_schedule_in_user,
-        ]
-        return WorkScheduleToolsData(
-            all_tools=all_tools,
-            analytics_tools=analytics_tools,
-        )

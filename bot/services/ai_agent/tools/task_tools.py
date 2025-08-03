@@ -1,12 +1,10 @@
 import datetime
 import logging
-from typing import Any, Coroutine
 
 import pytz
-from aiogram import Bot
-from arq import ArqRedis
 from langchain_core.tools import tool
 
+from bot.db.models.models import Task
 from bot.db.redis import redis_cache
 from bot.entities.shared import TaskReadExtended
 from bot.entities.task import (
@@ -14,10 +12,8 @@ from bot.entities.task import (
     TaskUpdate,
 )
 from bot.utils.enum import TaskStatus
-from bot.utils.unitofwork import UnitOfWork
 from scheduler.jobs import create_notification_job
 from .base import BaseTools
-from ..entities import TaskToolsData
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +21,32 @@ logger = logging.getLogger(__name__)
 class TaskTools(BaseTools):
     """Інструменти для роботи з завданнями."""
 
-    def __init__(self, uow: UnitOfWork, arq: ArqRedis, bot: Bot):
-        super().__init__(uow, arq)
-        self.uow = uow
-        self.arq = arq
-        self.bot = bot
+    async def create_notification_new_task(
+        self,
+        task_id: int,
+        user_id: int,
+    ):
+        """
+        Creates a notification for a newly created task.
+
+        This method triggers an asynchronous job to create a notification
+        related to a newly created task. The notification is specifically
+        for the task creator and is categorized under the subject "new_task".
+
+        Parameters:
+        task_id: int
+            The unique identifier of the task for which the notification
+            is created.
+        user_id: int
+            The unique identifier of the user who created the task.
+        """
+        await create_notification_job(
+            self.arq,
+            notification_for="executor",
+            notification_subject="task_created",
+            user_id=user_id,
+            task_id=task_id,
+        )
 
     async def create_notification_task_started(
         self,
@@ -168,7 +185,251 @@ class TaskTools(BaseTools):
             update_notification=update_notification,
         )
 
-    def get_tools(self) -> TaskToolsData:
+    async def create_one_task_func(self, new_task_data: TaskCreate):
+        tz_info = pytz.timezone("Europe/Kyiv")
+        new_task_data.start_datetime.replace(tzinfo=tz_info)
+        new_task_data.end_datetime.replace(tzinfo=tz_info)
+        task_id = None
+        creator_level = await self.get_user_hierarchy_level()
+
+        async with self.uow:
+            if new_task_data.creator_id != self.user_id:
+                return "Creator ID does not match the current user."
+            executor_level = await self.get_user_hierarchy_level(
+                new_task_data.executor_id
+            )
+            if executor_level < creator_level:
+                return "You do not have permission to create a task for this user."
+            task_data_dict = new_task_data.model_dump(exclude={"task_control_points"})
+            try:
+                task_id = await self.uow.tasks.add_one(task_data_dict)
+            except Exception as e:
+                logger.error(f"Error creating task: {e}")
+                await self.uow.rollback()
+                return f"Error creating task: {e}"
+            if new_task_data.task_control_points:
+                for control_point in new_task_data.task_control_points:
+                    # TODO: додати нотифікації по контрольним точкам
+                    control_point_data = control_point.model_dump()
+                    control_point_data["task_id"] = task_id
+                    try:
+                        await self.uow.task_control_points.add_one(control_point_data)
+                    except Exception as e:
+                        logger.error(f"Error creating control point: {e}")
+                        await self.uow.rollback()
+                        return f"Error creating control point: {e}"
+            await self.uow.commit()
+        await self.create_notification_task_ending_soon(
+            task_id=task_id,
+            user_id=new_task_data.executor_id,
+            _defer_until=new_task_data.end_datetime - datetime.timedelta(minutes=30),
+        )
+        await self.create_notification_task_is_overdue(
+            task_id=task_id,
+            executor_id=new_task_data.executor_id,
+            creator_id=new_task_data.creator_id,
+            _defer_until=new_task_data.end_datetime,
+        )
+        await self.create_notification_task_started(
+            task_id=task_id,
+            user_id=new_task_data.executor_id,
+            _defer_until=new_task_data.start_datetime,
+        )
+        await self.create_notification_new_task(
+            task_id=task_id,
+            user_id=new_task_data.creator_id,
+        )
+        return task_id
+
+    async def create_many_task_func(
+        self,
+        new_task_data: list[TaskCreate],
+    ):
+        created_task_ids = []
+        for new_task in new_task_data:
+            task_id = await self.create_one_task_func(new_task)
+            if isinstance(task_id, str):
+                return task_id
+            created_task_ids.append(task_id)
+        return created_task_ids
+
+    async def update_tasks_func(
+        self,
+        updates_list: list[TaskUpdate],
+    ):
+        tz_info = pytz.timezone("Europe/Kyiv")
+        async with self.uow:
+            for task_data in updates_list:
+                task_model = await self.uow.tasks.find_one(
+                    id=task_data.id,
+                )
+                if not task_model:
+                    await self.uow.rollback()
+                    return f"Task with ID {task_data.id} not found."
+                if (
+                    task_model.creator_id != self.user_id
+                    and await self.get_user_hierarchy_level() > 3
+                ):
+                    await self.uow.rollback()
+                    return f"You do not have permission to update this task."
+                if task_data.start_datetime:
+                    task_data.start_datetime.replace(tzinfo=tz_info)
+                if task_data.end_datetime:
+                    task_data.end_datetime.replace(tzinfo=tz_info)
+                task_dict = task_data.model_dump(
+                    exclude_unset=True, exclude_none=True, exclude={"id"}
+                )
+                try:
+                    await self.uow.tasks.edit_one(id=task_data.id, data=task_dict)
+                except Exception as e:
+                    logger.error(f"Error updating task: {e}")
+                    await self.uow.rollback()
+                    return f"Error updating task: {e}"
+
+            await self.uow.commit()
+            for task_data in updates_list:
+                await self.create_notification_task_updated(
+                    task_id=task_data.id,
+                    user_id=task_data.executor_id,
+                )
+                await self.create_notification_task_ending_soon(
+                    task_id=task_data.id,
+                    user_id=task_data.executor_id,
+                    _defer_until=task_data.end_datetime
+                    - datetime.timedelta(minutes=30),
+                    update_notification=True,
+                )
+                await self.create_notification_task_is_overdue(
+                    task_id=task_data.id,
+                    executor_id=task_data.executor_id,
+                    creator_id=task_data.creator_id,
+                    _defer_until=task_data.end_datetime,
+                    update_notification=True,
+                )
+                await self.create_notification_task_started(
+                    task_id=task_data.id,
+                    user_id=task_data.executor_id,
+                    _defer_until=task_data.start_datetime,
+                    update_notification=True,
+                )
+            return True
+
+    async def delete_task_func(self, task_id: int) -> str | bool:
+        async with self.uow:
+            try:
+                task_model: Task | None = await self.uow.tasks.find_one(id=task_id)
+                if not task_model:
+                    return f"Task with ID {task_id} not found."
+                if (
+                    task_model.creator_id != self.user_id
+                    and await self.get_user_hierarchy_level() > 3
+                ):
+                    return f"You do not have permission to delete this task."
+                await self.uow.tasks.delete_one(id=task_id)
+            except Exception as e:
+                logger.error(f"Error deleting task: {e}")
+                await self.uow.rollback()
+                return f"Error deleting task: {e}"
+            await self.uow.commit()
+            return True
+
+    @redis_cache(15)
+    async def get_tasks_func(
+        self,
+        creator_id: int | None = None,
+        executor_id: int | None = None,
+        category_id: int | None = None,
+        status: TaskStatus | None = None,
+        start_datetime: datetime.datetime | None = None,
+        end_datetime: datetime.datetime | None = None,
+    ):
+        async with self.uow:
+            hierarchy_level = await self.get_user_hierarchy_level()
+            if hierarchy_level > 3 and self.user_id not in [
+                creator_id,
+                executor_id,
+            ]:
+                return []
+            tasks = await self.uow.tasks.get_all_tasks(
+                creator_id=creator_id,
+                executor_id=executor_id,
+                category_id=category_id,
+                status=status,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+            )
+            return [
+                TaskReadExtended.model_validate(task, from_attributes=True).model_dump(
+                    exclude={
+                        "creator": {
+                            "position": {
+                                "hierarchy_level": {
+                                    "create_task_prompt",
+                                    "manage_task_prompt",
+                                    "work_schedule_prompt",
+                                    "category_prompt",
+                                    "analytics_prompt",
+                                }
+                            }
+                        },
+                        "executor": {
+                            "position": {
+                                "hierarchy_level": {
+                                    "create_task_prompt",
+                                    "manage_task_prompt",
+                                    "work_schedule_prompt",
+                                    "category_prompt",
+                                    "analytics_prompt",
+                                }
+                            }
+                        },
+                    },
+                )
+                for task in tasks
+            ]
+
+    async def get_task_by_id_func(self, task_id: int):
+        async with self.uow:
+            task = await self.uow.tasks.get_task_by_id(
+                task_id=task_id,
+            )
+            if (
+                self.user_id not in [task["creator_id"], task["executor_id"]]
+                and await self.get_user_hierarchy_level() > 3
+            ):
+                return None
+            return TaskReadExtended.model_validate(
+                task, from_attributes=True
+            ).model_dump(
+                exclude={
+                    "creator": {
+                        "position": {
+                            "hierarchy_level": {
+                                "create_task_prompt",
+                                "manage_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }
+                        }
+                    },
+                    "executor": {
+                        "position": {
+                            "hierarchy_level": {
+                                "create_task_prompt",
+                                "manage_task_prompt",
+                                "work_schedule_prompt",
+                                "category_prompt",
+                                "analytics_prompt",
+                            }
+                        }
+                    },
+                },
+            )
+
+    def get_tools(
+        self,
+    ) -> list:
         @tool
         async def create_one_task(new_task_data: TaskCreate):
             """
@@ -178,52 +439,7 @@ class TaskTools(BaseTools):
 
             :return: The ID of the created task.
             """
-            tz_info = pytz.timezone("Europe/Kyiv")
-            new_task_data.start_datetime.replace(tzinfo=tz_info)
-            new_task_data.end_datetime.replace(tzinfo=tz_info)
-            task_id = None
-            async with self.uow:
-                task_data_dict = new_task_data.model_dump(
-                    exclude={"task_control_points"}
-                )
-                try:
-                    task_id = await self.uow.tasks.add_one(task_data_dict)
-                except Exception as e:
-                    logger.error(f"Error creating task: {e}")
-                    await self.uow.rollback()
-                    return f"Error creating task: {e}"
-                if new_task_data.task_control_points:
-                    for control_point in new_task_data.task_control_points:
-                        # TODO: додати нотифікації по контрольним точкам
-                        control_point_data = control_point.model_dump()
-                        control_point_data["task_id"] = task_id
-                        try:
-                            await self.uow.task_control_points.add_one(
-                                control_point_data
-                            )
-                        except Exception as e:
-                            logger.error(f"Error creating control point: {e}")
-                            await self.uow.rollback()
-                            return f"Error creating control point: {e}"
-                await self.uow.commit()
-            await self.create_notification_task_ending_soon(
-                task_id=task_id,
-                user_id=new_task_data.executor_id,
-                _defer_until=new_task_data.end_datetime
-                - datetime.timedelta(minutes=30),
-            )
-            await self.create_notification_task_is_overdue(
-                task_id=task_id,
-                executor_id=new_task_data.executor_id,
-                creator_id=new_task_data.creator_id,
-                _defer_until=new_task_data.end_datetime,
-            )
-            await self.create_notification_task_started(
-                task_id=task_id,
-                user_id=new_task_data.executor_id,
-                _defer_until=new_task_data.start_datetime,
-            )
-            return task_id
+            return await self.create_one_task_func(new_task_data)
 
         @tool
         async def create_many_task(
@@ -236,55 +452,7 @@ class TaskTools(BaseTools):
 
             :return: list of created task IDs.
             """
-            created_task_ids = []
-            tz_info = pytz.timezone("Europe/Kyiv")
-
-            async with self.uow:
-                for new_task in new_task_data:
-                    new_task.start_datetime.replace(tzinfo=tz_info)
-                    new_task.end_datetime.replace(tzinfo=tz_info)
-                    task_data_dict = new_task.model_dump(
-                        exclude={"task_control_points"}
-                    )
-                    try:
-                        task_id = await self.uow.tasks.add_one(task_data_dict)
-                    except Exception as e:
-                        logger.error(f"Error creating task: {e}")
-                        await self.uow.rollback()
-                        return f"Error creating task: {e}"
-                    created_task_ids.append(task_id)
-                    await self.create_notification_task_ending_soon(
-                        task_id=task_id,
-                        user_id=new_task.executor_id,
-                        _defer_until=new_task.end_datetime
-                        - datetime.timedelta(minutes=30),
-                    )
-                    await self.create_notification_task_is_overdue(
-                        task_id=task_id,
-                        executor_id=new_task.executor_id,
-                        creator_id=new_task.creator_id,
-                        _defer_until=new_task.end_datetime,
-                    )
-                    await self.create_notification_task_started(
-                        task_id=task_id,
-                        user_id=new_task.executor_id,
-                        _defer_until=new_task.start_datetime,
-                    )
-                    if new_task.task_control_points:
-                        for control_point in new_task.task_control_points:
-                            control_point_data = control_point.model_dump()
-                            control_point_data["task_id"] = task_id
-                            try:
-                                await self.uow.task_control_points.add_one(
-                                    control_point_data
-                                )
-                            except Exception as e:
-                                logger.error(f"Error creating control point: {e}")
-                                await self.uow.rollback()
-                                return f"Error creating control point: {e}"
-
-                await self.uow.commit()
-                return created_task_ids
+            return await self.create_many_task_func(new_task_data)
 
         @tool
         async def update_tasks(updates_list: list[TaskUpdate]) -> bool:
@@ -296,51 +464,7 @@ class TaskTools(BaseTools):
             Returns:
                 bool: True, якщо завдання були успішно оновлені, False в іншому випадку.
             """
-            tz_info = pytz.timezone("Europe/Kyiv")
-            async with self.uow:
-                for task_data in updates_list:
-                    if task_data.start_datetime:
-                        task_data.start_datetime.replace(tzinfo=tz_info)
-                    if task_data.end_datetime:
-                        task_data.end_datetime.replace(tzinfo=tz_info)
-                    task_dict = task_data.model_dump(
-                        exclude_unset=True, exclude_none=True, exclude={"id"}
-                    )
-                    try:
-                        await self.uow.tasks.edit_one(id=task_data.id, data=task_dict)
-                    except Exception as e:
-                        logger.error(f"Error updating task: {e}")
-                        await self.uow.rollback()
-                        return f"Error updating task: {e}"
-
-                await self.uow.commit()
-                for task_data in updates_list:
-                    await self.create_notification_task_updated(
-                        task_id=task_data.id,
-                        user_id=task_data.executor_id,
-                    )
-                    await self.create_notification_task_ending_soon(
-                        task_id=task_data.id,
-                        user_id=task_data.executor_id,
-                        _defer_until=task_data.end_datetime
-                        - datetime.timedelta(minutes=30),
-                        update_notification=True,
-                    )
-                    await self.create_notification_task_is_overdue(
-                        task_id=task_data.id,
-                        executor_id=task_data.executor_id,
-                        creator_id=task_data.creator_id,
-                        _defer_until=task_data.end_datetime,
-                        update_notification=True,
-                    )
-
-                    await self.create_notification_task_started(
-                        task_id=task_data.id,
-                        user_id=task_data.executor_id,
-                        _defer_until=task_data.start_datetime,
-                        update_notification=True,
-                    )
-                return True
+            return await self.update_tasks_func(updates_list)
 
         @tool
         async def delete_task(task_id: int) -> str | bool:
@@ -352,15 +476,7 @@ class TaskTools(BaseTools):
             Returns:
                 bool: True, якщо завдання було успішно видалено, False в іншому випадку.
             """
-            async with self.uow:
-                try:
-                    await self.uow.tasks.delete_one(id=task_id)
-                except Exception as e:
-                    logger.error(f"Error deleting task: {e}")
-                    await self.uow.rollback()
-                    return f"Error deleting task: {e}"
-                await self.uow.commit()
-                return True
+            return await self.delete_task_func(task_id)
 
         @tool
         async def delete_many_tasks(task_ids: list[int]) -> str | bool:
@@ -374,52 +490,10 @@ class TaskTools(BaseTools):
             """
             async with self.uow:
                 for task_id in task_ids:
-                    try:
-                        await self.uow.tasks.delete_one(id=task_id)
-                    except Exception as e:
-                        logger.error(f"Error deleting task {task_id}: {e}")
-                        await self.uow.rollback()
-                        return f"Error deleting task {task_id}: {e}"
-                await self.uow.commit()
+                    result = await self.delete_task_func(task_id)
+                    if isinstance(result, str):
+                        return result
                 return True
-
-        @redis_cache(15)
-        async def get_tasks_func(
-            creator_id: int | None = None,
-            executor_id: int | None = None,
-            category_id: int | None = None,
-            status: TaskStatus | None = None,
-            start_datetime: datetime.datetime | None = None,
-            end_datetime: datetime.datetime | None = None,
-        ):
-            async with self.uow:
-                tasks = await self.uow.tasks.get_all_tasks(
-                    creator_id=creator_id,
-                    executor_id=executor_id,
-                    category_id=category_id,
-                    status=status,
-                    start_datetime=start_datetime,
-                    end_datetime=end_datetime,
-                )
-                return [
-                    TaskReadExtended.model_validate(
-                        task, from_attributes=True
-                    ).model_dump(
-                        exclude={
-                            "creator": {
-                                "position": {
-                                    "hierarchy_level": {"prompt", "analytics_prompt"}
-                                }
-                            },
-                            "executor": {
-                                "position": {
-                                    "hierarchy_level": {"prompt", "analytics_prompt"}
-                                }
-                            },
-                        },
-                    )
-                    for task in tasks
-                ]
 
         @tool
         async def get_tasks(
@@ -443,7 +517,7 @@ class TaskTools(BaseTools):
             Returns:
                 list[TaskReadExtended]: Список завдань, що відповідають критеріям.
             """
-            list_dict_tasks = await get_tasks_func(
+            list_dict_tasks = await self.get_tasks_func(
                 creator_id=creator_id,
                 executor_id=executor_id,
                 category_id=category_id,
@@ -453,6 +527,20 @@ class TaskTools(BaseTools):
             )
             return [TaskReadExtended.model_validate(task) for task in list_dict_tasks]
 
+        @tool
+        async def get_task_by_id(task_id: int):
+            """
+            Отримати завдання за його ID.
+
+            :param task_id: ID завдання, яке потрібно отримати.
+
+            Returns:
+                TaskReadExtended: Завдання з бази даних.
+            """
+            task_dict = await self.get_task_by_id_func(task_id)
+            if not task_dict:
+                return None
+            return TaskReadExtended.model_validate(task_dict)
 
         all_tools = [
             create_one_task,
@@ -461,6 +549,7 @@ class TaskTools(BaseTools):
             delete_task,
             delete_many_tasks,
             get_tasks,
+            get_task_by_id,
         ]
-        analytics_tools = [get_tasks]
-        return TaskToolsData(all_tools=all_tools, analytics_tools=analytics_tools)
+
+        return all_tools

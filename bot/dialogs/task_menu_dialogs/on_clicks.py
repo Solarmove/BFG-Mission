@@ -4,8 +4,9 @@ import logging
 import pytz
 from aiogram import Bot
 from aiogram.enums import ContentType
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager
+from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.common import ManagedScroll
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput
 from aiogram_dialog.widgets.kbd import Button, Select
@@ -13,6 +14,7 @@ from aiogram_i18n import I18nContext
 
 from ...db.models.models import TaskControlPoints
 from ...entities.shared import TaskReadExtended
+from ...keyboards.ai import exit_ai_agent_kb
 from ...services.log_service import LogService
 from ...services.mailing_service import send_message
 from ...services.task_services import (
@@ -25,6 +27,7 @@ from ...services.task_services import (
     is_completed_in_time_func,
     get_overdue_time,
 )
+from ...states.ai import AIAgentMenu
 from ...utils.enum import TaskStatus
 from ...utils.unitofwork import UnitOfWork
 from . import states
@@ -428,3 +431,27 @@ async def on_update_task_click(
 
     await uow.tasks.get_task_by_id(task_id, update_cache=True)
     await call.answer(i18n.get("task-updated-alert"))
+
+
+
+async def on_ai_agent_click(
+        call: CallbackQuery,
+        widget: Button,
+        manager: DialogManager,
+):
+    """
+    Handle the click event for the AI Agent button.
+    """
+    await manager.done(show_mode=ShowMode.NO_UPDATE)
+    state: FSMContext = manager.middleware_data["state"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    await call.message.edit_text(
+        i18n.get("ai-agent-manage-task-text"),
+        reply_markup=exit_ai_agent_kb().as_markup(),
+    )
+    await state.set_state(AIAgentMenu.send_query)
+    call_data = {
+        "message_id": call.message.message_id,
+        "inline_message_id": call.inline_message_id,
+    }
+    await state.set_data({"prompt": "manage_task_prompt", "call_data": call_data})
