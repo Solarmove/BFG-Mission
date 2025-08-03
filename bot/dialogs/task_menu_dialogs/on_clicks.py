@@ -101,11 +101,12 @@ async def on_confirm_task_click(
     await call.answer(
         i18n.get("task-confirmed-alert", task_title=task_model.title), show_alert=True
     )
+    tz_info = pytz.timezone('Europe/Kyiv')
     await channel_log.info(
         "Користувач підтвердив завдання",
         extra_info={
             "Завдання": task_model.title,
-            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
+            "Дедлайн": task_model.end_datetime.replace(tzinfo=tz_info).strftime("%Y-%m-%d %H:%M"),
             "Виконавець": task_model.executor.full_name
             or task_model.executor.full_name_tg,
             "Хто створив": task_model.creator.full_name
@@ -157,11 +158,12 @@ async def on_cancel_task_click(
         i18n.get("task-canceled-alert", task_title=task_model.title),
         show_alert=True,
     )
+    tz_info = pytz.timezone('Europe/Kyiv')
     await channel_log.info(
         "Користувач скасував завдання",
         extra_info={
             "Завдання": task_model.title,
-            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
+            "Дедлайн": task_model.end_datetime.replace(tzinfo=tz_info).strftime("%Y-%m-%d %H:%M"),
             "Виконавець": task_model.executor.full_name
             or task_model.executor.full_name_tg,
             "Хто створив": task_model.creator.full_name

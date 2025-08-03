@@ -42,7 +42,7 @@ def is_task_hot(task_deadline: datetime) -> bool:
     """Проверяет, горячее ли задание"""
     tz_info = pytz.timezone("Europe/Kyiv")
     current_time = datetime.now(tz_info)
-    return task_deadline - current_time <= timedelta(minutes=30)
+    return task_deadline.replace(tzinfo=tz_info) - current_time <= timedelta(minutes=30)
 
 
 def humanize_timedelta(td: timedelta) -> str:

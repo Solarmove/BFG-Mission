@@ -21,7 +21,7 @@ async def main_menu_getter(
     """
     user_model: UserModel = await uow.users.get_user_by_id(user_id=event_from_user.id)
     current_task_text = ""
-
+    tz_info = pytz.timezone("Europe/Kyiv")
     if user_model.position.hierarchy_level.level > 1:
         current_tasks: list[Task] = await uow.tasks.get_task_in_work(user_model.id)
         current_task_text = ""
@@ -31,9 +31,8 @@ async def main_menu_getter(
                 current_task_text += i18n.get(
                     "task_data_text",
                     task_title=task.title,
-                    task_deadline=task.end_datetime.strftime("%d.%m.%Y, %H:%M"),
+                    task_deadline=task.end_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
                 )
-    tz_info = pytz.timezone("Europe/Kyiv")
     return {
         "datetime_now": datetime.datetime.now(tz_info),
         "full_name": user_model.full_name or user_model.full_name_tg,
