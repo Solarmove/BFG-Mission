@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import Router, Bot
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_dialog import DialogManager
@@ -26,7 +27,9 @@ async def accept_task_callback(
     i18n: I18nContext,
     bot: Bot,
     channel_log: LogService,
+    state: FSMContext,
 ):
+    await state.clear()
     task_id = int(call.data.split(":")[1])
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
     task_model_extended = TaskReadExtended.model_validate(task_model_dict)
@@ -87,7 +90,9 @@ async def show_task_callback(
     uow: UnitOfWork,
     dialog_manager: DialogManager,
     i18n: I18nContext,
+    state: FSMContext,
 ):
+    await state.clear()
     task_id = int(call.data.split(":")[1])
     task_model: Task = await uow.tasks.find_one(id=task_id)
     user_model: User = await uow.users.get_user_by_id(call.from_user.id)
@@ -109,7 +114,9 @@ async def done_task_callback(
     i18n: I18nContext,
     bot: Bot,
     channel_log: LogService,
+    state: FSMContext,
 ):
+    await state.clear()
     task_id = int(call.data.split(":")[1])
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
     task_model_extended = TaskReadExtended.model_validate(task_model_dict)

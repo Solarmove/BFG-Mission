@@ -8,15 +8,7 @@ engine = create_async_engine(str(config.db_config.postgres_dsn))
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
-
-@event.listens_for(engine.sync_engine, "connect")
-def set_timezone(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("SET TIME ZONE 'Europe/Kyiv'")
-    except Exception:
-        cursor.execute("SET TIME ZONE 'Europe/Kiev'")
-    cursor.close()
+logger = config.logger.get_logger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -30,6 +22,24 @@ class Base(DeclarativeBase):
             cols.append(f"{col}={getattr(self, col)}")
 
         return f"<{self.__class__.__name__} {', '.join(cols)}>"
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def set_timezone(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("SET TIME ZONE 'Europe/Kyiv'")
+    except Exception:
+        cursor.execute("SET TIME ZONE 'Europe/Kiev'")
+    logger.info(
+        "🟢 New physical DB connection established; timezone set to Europe/Kyiv"
+    )
+    cursor.close()
+
+
+@event.listens_for(engine.sync_engine, "checkout")
+def on_checkout(dbapi_connection, connection_record, connection_proxy):
+    logger.debug("🔁 Connection checked out from pool")
 
 
 async def get_async_session():
