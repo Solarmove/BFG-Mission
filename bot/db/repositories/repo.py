@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
@@ -183,6 +184,7 @@ class TaskRepo(SQLAlchemyRepository):
         result = res.unique().scalar_one_or_none()
         if result is None:
             return None
+        logging.info(f"task: {result.start_datetime} - {result.end_datetime}, ")
         task_model = TaskReadExtended.model_validate(result, from_attributes=True)
         return (
             task_model.model_dump(
