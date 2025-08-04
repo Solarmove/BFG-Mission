@@ -21,5 +21,8 @@ class TaskReportRead(BaseModel):
     @field_validator("created_at", mode="before")
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=KYIV)  # наивное = время в Киеве
+            else:
+                v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v

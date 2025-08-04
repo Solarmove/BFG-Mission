@@ -60,7 +60,10 @@ class TaskRead(BaseModel):
     )
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=KYIV)  # наивное = время в Киеве
+            else:
+                v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v
 
 
@@ -101,7 +104,10 @@ class TaskCreate(BaseModel):
     )
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=KYIV)  # наивное = время в Киеве
+            else:
+                v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v
 
 
@@ -133,7 +139,6 @@ class TaskUpdate(BaseModel):
         return v
 
 
-
 class TaskControlPointRead(BaseModel):
     """Модель для читання контрольної точки звіту завдання.
     Тобто виконавець в цій точці зможе відзвітувати про прогрес виконання завдання (якщо це передбачено)"""
@@ -147,9 +152,11 @@ class TaskControlPointRead(BaseModel):
     @field_validator("datetime_complete", "deadline", mode="before")
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=KYIV)  # наивное = время в Киеве
+            else:
+                v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v
-
 
 
 class TaskControlPointCreate(BaseModel):
@@ -164,9 +171,11 @@ class TaskControlPointCreate(BaseModel):
     @field_validator("deadline", mode="before")
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=KYIV)  # наивное = время в Киеве
+            else:
+                v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v
-
 
 
 class TaskCategoryRead(BaseModel):
