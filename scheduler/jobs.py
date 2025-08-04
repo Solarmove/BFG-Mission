@@ -22,7 +22,6 @@ async def create_notification_job(
     arq: ArqRedis,
     notification_for: NOTIFICATION_FOR,
     notification_subject: NOTIFICATION_SUBJECTS,
-    user_id: int,
     task_id: int,
     _defer_until: datetime.datetime | None = None,
     _defer_by: datetime.timedelta | None = None,
@@ -59,7 +58,6 @@ async def create_notification_job(
             extra_info={
                 "DEFER_UNTIL": _defer_until,
                 "CURRENT_TIME": datetime_now,
-                "USER_ID": user_id,
                 "TASK_ID": task_id,
                 "NOTIFICATION_FOR": notification_for,
                 "NOTIFICATION_SUBJECT": notification_subject,
@@ -71,16 +69,13 @@ async def create_notification_job(
             "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним.",
             extra_info={
                 "DEFER_BY": _defer_by,
-                "USER_ID": user_id,
                 "TASK_ID": task_id,
                 "NOTIFICATION_FOR": notification_for,
                 "NOTIFICATION_SUBJECT": notification_subject,
             },
         )
         return "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним."
-    job_id = (
-        f"notification_{notification_for}_{notification_subject}_{user_id}_{task_id}"
-    )
+    job_id = f"notification_{notification_for}_{notification_subject}_{task_id}"
     if update_notification:
         existing_job = Job(job_id=job_id, redis=redis)
         result = await existing_job.abort()
@@ -98,21 +93,19 @@ async def create_notification_job(
             _job_id=job_id,
             _defer_until=_defer_until if _defer_until else None,
             _defer_by=_defer_by,
-            user_id=user_id,
             task_id=task_id,
             notification_for=notification_for,
             notification_subject=notification_subject,
         )
     except Exception as e:
         logger.error(
-            f"Failed to create notification job {job_id} for user {user_id} and task {task_id}: {e}"
+            f"Failed to create notification job {job_id} for task {task_id}: {e}"
         )
         await log_service.log_exception(
             e,
             context="Створення нотифікаії",
             extra_info={
                 "JOB_ID": job_id,
-                "USER_ID": user_id,
                 "TASK_ID": task_id,
                 "NOTIFICATION_FOR": notification_for,
                 "NOTIFICATION_SUBJECT": notification_subject,

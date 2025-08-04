@@ -33,7 +33,7 @@ async def main_menu_getter(
                     task_title=task.title,
                     task_deadline=end_datetime.strftime("%d.%m.%Y, %H:%M"),
                 )
-    datetime_now = (datetime.datetime.now().replace(tzinfo=KYIV),)
+    datetime_now = datetime.datetime.now().replace(tzinfo=KYIV)
     return {
         "datetime_now": datetime_now,
         "full_name": user_model.full_name or user_model.full_name_tg,

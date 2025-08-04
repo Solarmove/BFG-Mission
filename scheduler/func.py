@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 async def send_notification(
     ctx: dict,
-    user_id: int,
     task_id: int,
     notification_for: NOTIFICATION_FOR,
     notification_subject: NOTIFICATION_SUBJECTS,
@@ -47,7 +46,7 @@ async def send_notification(
     bot: Bot = ctx["bot"]
     uow = UnitOfWork()
     core = ctx["core"]
-    locale = await get_user_locale(user_id)
+    locale = 'uk'
     async with uow:
         task_model_dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
         if not task_model_dict:
@@ -75,7 +74,6 @@ async def send_notification(
                 locale=locale,
                 core=core,
                 bot=bot,
-                user_id=user_id,
             )
         elif notification_subject == "task_started":
             await send_task_started_notification(

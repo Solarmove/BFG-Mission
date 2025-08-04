@@ -41,7 +41,6 @@ async def send_task_overdue_notification(
     locale: str,
     core: FluentRuntimeCore,
     bot: Bot,
-    user_id: int,
 ):
     executor_full_name = "Без виконавця"
     if task_model_extended.executor:
@@ -70,6 +69,10 @@ async def send_task_overdue_notification(
             "task_title": task_model_extended.title,
         },
     }
+    user_id_mapper = {
+        "creator": task_model_extended.creator_id,
+        "executor": task_model_extended.executor_id,
+    }
     message_text = core.get(
         text_mapper[notification_for],
         locale,
@@ -78,7 +81,7 @@ async def send_task_overdue_notification(
 
     await send_message(
         bot,
-        user_id,
+        user_id_mapper[notification_for],
         message_text,
         reply_markup=create_show_task_kb(task_id=task_model_extended.id),
     )

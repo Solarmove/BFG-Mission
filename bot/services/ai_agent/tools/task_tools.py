@@ -24,7 +24,6 @@ class TaskTools(BaseTools):
     async def create_notification_new_task(
         self,
         task_id: int,
-        user_id: int,
     ):
         """
         Creates a notification for a newly created task.
@@ -44,14 +43,12 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="executor",
             notification_subject="task_created",
-            user_id=user_id,
             task_id=task_id,
         )
 
     async def create_notification_task_started(
         self,
         task_id: int,
-        user_id: int,
         _defer_until: datetime.datetime | None = None,
         _defer_by: datetime.timedelta | None = None,
         update_notification: bool = False,
@@ -60,7 +57,6 @@ class TaskTools(BaseTools):
         Створює завдання для надсилання сповіщення користувачу про те, що завдання почалося.
         Args:
             task_id (int): ID завдання, про яке буде надіслано сповіщення.
-            user_id (int): ID користувача, якому буде надіслано сповіщення.
             _defer_until (datetime.datetime | None): Час, до якого слід відкласти виконання завдання.
                 Якщо вказано, то завдання буде виконано в цей час.
             _defer_by (datetime.timedelta | None): Час, на який слід відкласти виконання завдання.
@@ -75,7 +71,6 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="executor",
             notification_subject="task_started",
-            user_id=user_id,
             task_id=task_id,
             _defer_until=_defer_until,
             _defer_by=_defer_by,
@@ -85,13 +80,11 @@ class TaskTools(BaseTools):
     async def create_notification_task_updated(
         self,
         task_id: int,
-        user_id: int,
     ):
         """
         Створює завдання для надсилання сповіщення користувачу про те, що завдання оновлено.
         Args:
             task_id (int): ID завдання, про яке буде надіслано сповіщення.
-            user_id (int): ID користувача, якому буде надіслано сповіщення.
 
             Якщо не вказати _defer_until та _defer_by - повідомлення буде надіслано відразу.
 
@@ -100,15 +93,12 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="executor",
             notification_subject="task_updated",
-            user_id=user_id,
             task_id=task_id,
         )
 
     async def create_notification_task_is_overdue(
         self,
         task_id: int,
-        executor_id: int,
-        creator_id: int,
         _defer_until: datetime.datetime | None = None,
         _defer_by: datetime.timedelta | None = None,
         update_notification: bool = False,
@@ -117,8 +107,7 @@ class TaskTools(BaseTools):
         Створює завдання для надсилання сповіщення користувачу про те, що завдання прострочено.
         Args:
             task_id (int): ID завдання, про яке буде надіслано сповіщення.
-            executor_id (int): ID виконавця завдання, якому буде надіслано сповіщення.
-            creator_id (int): ID творця завдання, якому буде надіслано сповіщення.
+
             _defer_until (datetime.datetime | None): Час, до якого слід відкласти виконання завдання.
                 Якщо вказано, то завдання буде виконано в цей час.
             _defer_by (datetime.timedelta | None): Час, на який слід відкласти виконання завдання.
@@ -133,7 +122,6 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="executor",
             notification_subject="task_overdue",
-            user_id=executor_id,
             task_id=task_id,
             _defer_until=_defer_until,
             _defer_by=_defer_by,
@@ -143,7 +131,6 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="creator",
             notification_subject="task_overdue",
-            user_id=creator_id,
             task_id=task_id,
             _defer_until=_defer_until,
             _defer_by=_defer_by,
@@ -153,7 +140,6 @@ class TaskTools(BaseTools):
     async def create_notification_task_ending_soon(
         self,
         task_id: int,
-        user_id: int,
         _defer_until: datetime.datetime | None = None,
         _defer_by: datetime.timedelta | None = None,
         update_notification: bool = False,
@@ -162,7 +148,6 @@ class TaskTools(BaseTools):
         Створює завдання для надсилання сповіщення користувачу про те, що завдання закінчується незабаром.
         Args:
             task_id (int): ID завдання, про яке буде надіслано сповіщення.
-            user_id (int): ID користувача, якому буде надіслано сповіщення.
             _defer_until (datetime.datetime | None): Час, до якого слід відкласти виконання завдання.
                 Якщо вказано, то завдання буде виконано в цей час.
             _defer_by (datetime.timedelta | None): Час, на який слід відкласти виконання завдання.
@@ -178,7 +163,6 @@ class TaskTools(BaseTools):
             self.arq,
             notification_for="executor",
             notification_subject="task_ending_soon",
-            user_id=user_id,
             task_id=task_id,
             _defer_until=_defer_until,
             _defer_by=_defer_by,
@@ -220,23 +204,18 @@ class TaskTools(BaseTools):
             await self.uow.commit()
         await self.create_notification_task_ending_soon(
             task_id=task_id,
-            user_id=new_task_data.executor_id,
             _defer_until=new_task_data.end_datetime - datetime.timedelta(minutes=30),
         )
         await self.create_notification_task_is_overdue(
             task_id=task_id,
-            executor_id=new_task_data.executor_id,
-            creator_id=new_task_data.creator_id,
             _defer_until=new_task_data.end_datetime,
         )
         await self.create_notification_task_started(
             task_id=task_id,
-            user_id=new_task_data.executor_id,
             _defer_until=new_task_data.start_datetime,
         )
         await self.create_notification_new_task(
             task_id=task_id,
-            user_id=new_task_data.creator_id,
         )
         return task_id
 
@@ -290,25 +269,20 @@ class TaskTools(BaseTools):
             for task_data in updates_list:
                 await self.create_notification_task_updated(
                     task_id=task_data.id,
-                    user_id=task_data.executor_id,
                 )
                 await self.create_notification_task_ending_soon(
                     task_id=task_data.id,
-                    user_id=task_data.executor_id,
                     _defer_until=task_data.end_datetime
                     - datetime.timedelta(minutes=30),
                     update_notification=True,
                 )
                 await self.create_notification_task_is_overdue(
                     task_id=task_data.id,
-                    executor_id=task_data.executor_id,
-                    creator_id=task_data.creator_id,
                     _defer_until=task_data.end_datetime,
                     update_notification=True,
                 )
                 await self.create_notification_task_started(
                     task_id=task_data.id,
-                    user_id=task_data.executor_id,
                     _defer_until=task_data.start_datetime,
                     update_notification=True,
                 )
