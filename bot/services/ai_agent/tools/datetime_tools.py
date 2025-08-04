@@ -1,7 +1,8 @@
 import datetime
 from langchain_core.tools import tool
+
+from configreader import KYIV
 from .base import BaseTools
-import pytz
 
 
 class DateTimeTools(BaseTools):
@@ -11,7 +12,8 @@ class DateTimeTools(BaseTools):
         @tool
         async def get_datetime():
             """Отримати поточну дату та час у Києві."""
-            tz = pytz.timezone("Europe/Kyiv")
-            return datetime.datetime.now(tz)
+
+            datetime_now = datetime.datetime.now().replace(tzinfo=KYIV)
+            return datetime_now
 
         return [get_datetime]

@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
     Message,
-    ReplyKeyboardRemove,
     InlineKeyboardMarkup,
 )
 from aiogram_dialog import DialogManager, StartMode, ShowMode
@@ -120,7 +119,7 @@ async def start_ai_agent(
             max_retries=15,
             streaming=False,
             top_p=0.5,
-            n=1
+            n=1,
         ),
         prompt=formatter_prompt,
         redis_client=redis,

@@ -1,7 +1,6 @@
 import datetime
 from pprint import pprint
 
-import pytz
 from aiogram.types import User  # noqa: F401
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram_dialog.api.entities import MediaAttachment, MediaId
@@ -15,6 +14,7 @@ from bot.entities.task import TaskRead
 from bot.utils.enum import TaskStatus
 from bot.utils.misc import is_task_hot
 from bot.utils.unitofwork import UnitOfWork
+from configreader import KYIV
 
 
 async def get_selected_type_of_task(
@@ -58,7 +58,6 @@ async def my_tasks_getter(
     i18n: I18nContext,
     **kwargs: dict,
 ):
-    tz_info = pytz.timezone('Europe/Kyiv')
     task_type = dialog_manager.dialog_data.get("task_type")
     task_direction = dialog_manager.dialog_data.get("task_direction", "income")
     if task_direction == "outcome":
@@ -85,7 +84,7 @@ async def my_tasks_getter(
             executor_id=executor_id,
             creator_id=creator_id,
             start_datetime=datetime.datetime.now().replace(
-                hour=0, minute=0, second=0, microsecond=0, tzinfo=tz_info
+                hour=0, minute=0, second=0, microsecond=0, tzinfo=KYIV
             ),
         )
     elif task_type == "all":
@@ -128,7 +127,6 @@ async def get_task(
     i18n: I18nContext,
     **kwargs: dict,
 ):
-    tz_info = pytz.timezone("Europe/Kyiv")
     report_content_list = []
     report_text_list = []
     start_data = dialog_manager.start_data or {}
@@ -183,8 +181,8 @@ async def get_task(
         else i18n.get("task-no-reports"),
         "task_title": task.title,
         "task_description": task.description or i18n.get("task-no-description"),
-        "task_start_datetime": task.start_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
-        "task_end_datetime": task.end_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
+        "task_start_datetime": task.start_datetime.strftime("%d.%m.%Y, %H:%M"),
+        "task_end_datetime": task.end_datetime.strftime("%d.%m.%Y, %H:%M"),
         "task_category": task.category.name
         if task.category
         else i18n.get("task-no-category"),
@@ -200,14 +198,14 @@ async def get_task(
         "task_creator": task.creator.full_name or task.creator.full_name_tg,
         "task_executor": task.executor.full_name or task.executor.full_name_tg,
         "task_completed_datetime": (
-            task.completed_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M")
+            task.completed_datetime.strftime("%d.%m.%Y, %H:%M")
             if task.completed_datetime
             else i18n.get("task-not-completed")
         ),
         "control_points": "\n".join(
             f'▶️ {index + 1}. "{cp.description}"\n'
-            f"<b>Дедлайн</b>: <i>{cp.deadline.replace(tzinfo=tz_info).strftime('%d.%m.%Y, %H:%M')}</i>\n"
-            f"<b>Виконано:</b> {cp.datetime_complete.replace(tzinfo=tz_info).strftime('%d.%m.%Y, %H:%M') if cp.datetime_complete else i18n.get('control-point-not-completed')}"
+            f"<b>Дедлайн</b>: <i>{cp.deadline.strftime('%d.%m.%Y, %H:%M')}</i>\n"
+            f"<b>Виконано:</b> {cp.datetime_complete.strftime('%d.%m.%Y, %H:%M') if cp.datetime_complete else i18n.get('control-point-not-completed')}"
             for index, cp in enumerate(task.control_points)
         )
         if task.control_points

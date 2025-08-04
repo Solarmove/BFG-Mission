@@ -8,7 +8,6 @@ from starlette_admin.exceptions import FormValidationError, LoginFailed
 from configreader import config
 
 
-
 users = {
     "root": {
         "name": "Root Admin",

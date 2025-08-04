@@ -11,7 +11,6 @@ from ..manage_personal_dialogs.states import (
     ManageWorkSchedule,
     CreateRegLink,
 )
-from ..task_menu_dialogs import states
 from ..task_menu_dialogs.states import MyTasks
 from ...i18n.utils.i18n_format import I18nFormat
 from . import on_clicks

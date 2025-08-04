@@ -12,7 +12,6 @@ from . import on_clicks, states  # noqa: F401
 from ...i18n.utils.i18n_format import I18nFormat
 
 
-
 def select_position_keyboard():
     return ScrollingGroup(
         Select(

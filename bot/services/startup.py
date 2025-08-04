@@ -1,4 +1,3 @@
-from bot.utils.consts import positions_map
 from bot.utils.unitofwork import UnitOfWork
 
 

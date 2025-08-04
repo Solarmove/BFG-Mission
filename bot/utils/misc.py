@@ -1,13 +1,12 @@
 import os
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, timedelta
 
-import pytz
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram.utils.link import create_tg_link
 from openai import AsyncOpenAI
 
-from configreader import config
+from configreader import config, KYIV
 
 
 async def get_user_url(username: str | None, user_id: int, full_name: str):
@@ -40,9 +39,10 @@ async def voice_to_text(bot: Bot, message: Message) -> str:
 
 def is_task_hot(task_deadline: datetime) -> bool:
     """Проверяет, горячее ли задание"""
-    tz_info = pytz.timezone("Europe/Kyiv")
-    current_time = datetime.now(tz_info)
-    return task_deadline.replace(tzinfo=tz_info) - current_time <= timedelta(minutes=30)
+
+    current_time = datetime.now().replace(tzinfo=KYIV)
+    task_deadline = task_deadline.replace(tzinfo=KYIV)
+    return task_deadline - current_time <= timedelta(minutes=30)
 
 
 def humanize_timedelta(td: timedelta) -> str:

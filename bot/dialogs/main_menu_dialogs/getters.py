@@ -1,12 +1,12 @@
 import datetime
 
-import pytz
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram.types import User  # noqa: F401
 from aiogram_i18n import I18nContext
 
 from bot.utils.unitofwork import UnitOfWork
 from bot.db.models.models import User as UserModel, Task
+from configreader import KYIV
 
 
 async def main_menu_getter(
@@ -21,20 +21,21 @@ async def main_menu_getter(
     """
     user_model: UserModel = await uow.users.get_user_by_id(user_id=event_from_user.id)
     current_task_text = ""
-    tz_info = pytz.timezone("Europe/Kyiv")
     if user_model.position.hierarchy_level.level > 1:
         current_tasks: list[Task] = await uow.tasks.get_task_in_work(user_model.id)
         current_task_text = ""
         if current_tasks:
             current_task_text += i18n.get("task_in_work")
             for task in current_tasks:
+                end_datetime = task.end_datetime.replace(tzinfo=KYIV)
                 current_task_text += i18n.get(
                     "task_data_text",
                     task_title=task.title,
-                    task_deadline=task.end_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
+                    task_deadline=end_datetime.strftime("%d.%m.%Y, %H:%M"),
                 )
+    datetime_now = (datetime.datetime.now().replace(tzinfo=KYIV),)
     return {
-        "datetime_now": datetime.datetime.now(tz_info),
+        "datetime_now": datetime_now,
         "full_name": user_model.full_name or user_model.full_name_tg,
         "username": user_model.username,
         "position": user_model.position.title,

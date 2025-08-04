@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-import pytz
 from aiogram import Bot
 from aiogram.enums import ContentType
 from aiogram.fsm.context import FSMContext
@@ -12,6 +11,7 @@ from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput
 from aiogram_dialog.widgets.kbd import Button, Select
 from aiogram_i18n import I18nContext
 
+from configreader import KYIV
 from ...db.models.models import TaskControlPoints
 from ...entities.shared import TaskReadExtended
 from ...keyboards.ai import exit_ai_agent_kb
@@ -104,12 +104,12 @@ async def on_confirm_task_click(
     await call.answer(
         i18n.get("task-confirmed-alert", task_title=task_model.title), show_alert=True
     )
-    tz_info = pytz.timezone('Europe/Kyiv')
+    task_model.end_datetime = task_model.end_datetime.replace(tzinfo=KYIV)
     await channel_log.info(
         "Користувач підтвердив завдання",
         extra_info={
             "Завдання": task_model.title,
-            "Дедлайн": task_model.end_datetime.replace(tzinfo=tz_info).strftime("%Y-%m-%d %H:%M"),
+            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
             "Виконавець": task_model.executor.full_name
             or task_model.executor.full_name_tg,
             "Хто створив": task_model.creator.full_name
@@ -161,12 +161,12 @@ async def on_cancel_task_click(
         i18n.get("task-canceled-alert", task_title=task_model.title),
         show_alert=True,
     )
-    tz_info = pytz.timezone('Europe/Kyiv')
+    task_model.end_datetime = task_model.end_datetime.replace(tzinfo=KYIV)
     await channel_log.info(
         "Користувач скасував завдання",
         extra_info={
             "Завдання": task_model.title,
-            "Дедлайн": task_model.end_datetime.replace(tzinfo=tz_info).strftime("%Y-%m-%d %H:%M"),
+            "Дедлайн": task_model.end_datetime.strftime("%Y-%m-%d %H:%M"),
             "Виконавець": task_model.executor.full_name
             or task_model.executor.full_name_tg,
             "Хто створив": task_model.creator.full_name
@@ -347,8 +347,8 @@ async def on_confirm_complete_task_click(
     task_model = TaskReadExtended.model_validate(task_model_dict)
     report_text = manager.dialog_data.get("report_text", "")
     report_media_list = manager.dialog_data.get("report_media_list", [])
-    tz_info = pytz.timezone('Europe/Kyiv')
-    datetime_complete = datetime.datetime.now(tz_info)
+
+    datetime_complete = datetime.datetime.now().replace(tzinfo=KYIV)
     is_control_point = bool(control_point_id)
     if is_control_point:
         control_point_model = await uow.task_control_points.find_one(
@@ -433,11 +433,10 @@ async def on_update_task_click(
     await call.answer(i18n.get("task-updated-alert"))
 
 
-
 async def on_ai_agent_click(
-        call: CallbackQuery,
-        widget: Button,
-        manager: DialogManager,
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
 ):
     """
     Handle the click event for the AI Agent button.

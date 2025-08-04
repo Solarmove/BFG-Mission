@@ -82,7 +82,7 @@ async def on_start_create_task(
             i18n.get("ai-agent-create-task-text"),
             reply_markup=exit_ai_agent_kb().as_markup(),
         )
-    except TelegramRetryAfter as e:
+    except TelegramRetryAfter:
         await call.message.edit_reply_markup(
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[]])
         )
@@ -96,4 +96,4 @@ async def on_start_create_task(
         "message_id": call.message.message_id,
         "inline_message_id": call.inline_message_id,
     }
-    await state.set_data({'prompt': 'create_task_prompt', "call_data": call_data})
+    await state.set_data({"prompt": "create_task_prompt", "call_data": call_data})

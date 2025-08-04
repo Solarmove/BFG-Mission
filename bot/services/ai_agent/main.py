@@ -11,7 +11,6 @@ from langchain.agents import (
 )
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableWithMessageHistory, RunnableConfig
 from langchain_core.tools import BaseTool

@@ -1,6 +1,8 @@
 import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from configreader import KYIV
 
 
 class HierarchyLevelRead(BaseModel):
@@ -52,6 +54,13 @@ class UserRead(BaseModel):
     updated_at: datetime.datetime
     """Дата та час останнього оновлення користувача. Використовується для відстеження змін у профілі користувача."""
 
+    @field_validator("created_at", "updated_at", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
+
 
 class WorkScheduleRead(BaseModel):
     """Модель для читання даних робочого графіку користувача з бази даних."""
@@ -66,6 +75,13 @@ class WorkScheduleRead(BaseModel):
     """Час закінчення робочого дня."""
     date: datetime.date
 
+    @field_validator("start_time", "end_time", "date", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
+
 
 class WorkScheduleUpdate(BaseModel):
     """Модель для оновлення робочого графіку користувача."""
@@ -76,6 +92,13 @@ class WorkScheduleUpdate(BaseModel):
     """Час закінчення робочого дня. Може бути `None`, якщо не потрібно змінювати."""
     date: datetime.date | None = None
     """Дата робочого графіку. Може бути `None`, якщо не потрібно змінювати."""
+
+    @field_validator("start_time", "end_time", "date", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
 
 
 class WorkScheduleCreate(BaseModel):
@@ -89,3 +112,10 @@ class WorkScheduleCreate(BaseModel):
     """Час закінчення робочого дня."""
     date: datetime.date
     """Дата робочого графіку."""
+
+    @field_validator("start_time", "end_time", "date", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v

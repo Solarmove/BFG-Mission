@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import os.path
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from arq.connections import RedisSettings
 from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_PATH = Path(__file__).parent
+
+KYIV = ZoneInfo("Europe/Kyiv")
 
 
 class BotConfig(BaseSettings):

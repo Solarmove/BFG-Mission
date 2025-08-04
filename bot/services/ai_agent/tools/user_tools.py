@@ -16,7 +16,6 @@ from bot.keyboards.task import (
 from bot.utils.unitofwork import UnitOfWork
 
 from .base import BaseTools
-from ..entities import UserToolsData
 from ...mailing_service import send_message
 
 

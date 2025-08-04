@@ -1,11 +1,23 @@
 import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from bot.utils.enum import TaskStatus
+from configreader import KYIV
 
 
-class TaskRead(BaseModel):
+class BaseTaskModel(BaseModel):
+    @field_validator(
+        "start_datetime", "end_datetime", "completed_datetime", mode="before"
+    )
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
+
+
+class TaskRead(BaseTaskModel):
     """Модель для читання даних завдання."""
 
     id: int
@@ -36,7 +48,7 @@ class TaskRead(BaseModel):
     """Статус завдання. За замовчуванням NEW."""
 
 
-class TaskCreate(BaseModel):
+class TaskCreate(BaseTaskModel):
     """Модель для створення нового завдання."""
 
     creator_id: int
@@ -65,8 +77,15 @@ class TaskCreate(BaseModel):
 
     task_control_points: list["TaskControlPointCreate"] | None = None
 
+    @field_validator("start_datetime", "end_datetime", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
 
-class TaskUpdate(BaseModel):
+
+class TaskUpdate(BaseTaskModel):
     """Модель для оновлення існуючого завдання."""
 
     id: int
@@ -87,6 +106,13 @@ class TaskUpdate(BaseModel):
     file_required: bool | None = False
     """Чи потрібен файл звіт при виконанні завдання? За замовчуванням False"""
 
+    @field_validator("start_datetime", "end_datetime", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
+
 
 class TaskControlPointRead(BaseModel):
     """Модель для читання контрольної точки звіту завдання.
@@ -98,6 +124,13 @@ class TaskControlPointRead(BaseModel):
     datetime_complete: datetime.datetime | None = None
     description: str | None = None
 
+    @field_validator("datetime_complete", "deadline", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
+
 
 class TaskControlPointCreate(BaseModel):
     """Модель для створення контрольної точки звіту завдання.
@@ -107,6 +140,13 @@ class TaskControlPointCreate(BaseModel):
     """Дата та час дедлайну контрольної точки звіту"""
     description: str
     """Опис контрольної точки звіту, що повинно бути зроблено або будь які інші деталі, які потрібно врахувати при звіті"""
+
+    @field_validator("deadline", mode="before")
+    def normalize_to_kyiv(cls, v: datetime) -> datetime:
+        if v is None:
+            return v
+        v = v.replace(tzinfo=KYIV)
+        return v
 
 
 class TaskCategoryRead(BaseModel):

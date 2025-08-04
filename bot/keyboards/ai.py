@@ -9,4 +9,3 @@ def exit_ai_agent_kb() -> InlineKeyboardBuilder:
     cancel_kb = InlineKeyboardBuilder()
     cancel_kb.add(InlineKeyboardButton(text="Назад", callback_data="cancel_ai_agent"))
     return cancel_kb
-

@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-import pytz
 from langchain_core.tools import tool
 
 from bot.db.models.models import Task
@@ -12,6 +11,7 @@ from bot.entities.task import (
     TaskUpdate,
 )
 from bot.utils.enum import TaskStatus
+from configreader import KYIV
 from scheduler.jobs import create_notification_job
 from .base import BaseTools
 
@@ -186,9 +186,8 @@ class TaskTools(BaseTools):
         )
 
     async def create_one_task_func(self, new_task_data: TaskCreate):
-        tz_info = pytz.timezone("Europe/Kyiv")
-        new_task_data.start_datetime.replace(tzinfo=tz_info)
-        new_task_data.end_datetime.replace(tzinfo=tz_info)
+        new_task_data.start_datetime = new_task_data.start_datetime.replace(tzinfo=KYIV)
+        new_task_data.end_datetime = new_task_data.end_datetime.replace(tzinfo=KYIV)
         task_id = None
         creator_level = await self.get_user_hierarchy_level()
 
@@ -257,7 +256,6 @@ class TaskTools(BaseTools):
         self,
         updates_list: list[TaskUpdate],
     ):
-        tz_info = pytz.timezone("Europe/Kyiv")
         async with self.uow:
             for task_data in updates_list:
                 task_model = await self.uow.tasks.find_one(
@@ -271,11 +269,13 @@ class TaskTools(BaseTools):
                     and await self.get_user_hierarchy_level() > 3
                 ):
                     await self.uow.rollback()
-                    return f"You do not have permission to update this task."
+                    return "You do not have permission to update this task."
                 if task_data.start_datetime:
-                    task_data.start_datetime.replace(tzinfo=tz_info)
+                    task_data.start_datetime = task_data.start_datetime.replace(
+                        tzinfo=KYIV
+                    )
                 if task_data.end_datetime:
-                    task_data.end_datetime.replace(tzinfo=tz_info)
+                    task_data.end_datetime = task_data.end_datetime.replace(tzinfo=KYIV)
                 task_dict = task_data.model_dump(
                     exclude_unset=True, exclude_none=True, exclude={"id"}
                 )
@@ -324,7 +324,7 @@ class TaskTools(BaseTools):
                     task_model.creator_id != self.user_id
                     and await self.get_user_hierarchy_level() > 3
                 ):
-                    return f"You do not have permission to delete this task."
+                    return "You do not have permission to delete this task."
                 await self.uow.tasks.delete_one(id=task_id)
             except Exception as e:
                 logger.error(f"Error deleting task: {e}")

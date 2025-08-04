@@ -1,12 +1,10 @@
 import logging
-from typing import Any, Coroutine
 
 from langchain_core.tools import tool
 
 from bot.db.redis import redis_cache
 from bot.entities.task import TaskCategoryRead
 from .base import BaseTools
-from ..entities import CategoryToolsData
 
 logger = logging.getLogger(__name__)
 

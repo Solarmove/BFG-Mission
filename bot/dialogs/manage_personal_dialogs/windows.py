@@ -9,7 +9,6 @@ from . import states, getters, keyboards, on_clicks  # noqa: F401
 from ...i18n.utils.i18n_format import I18nFormat
 
 
-
 create_reg_link_window = Window(
     I18nFormat("select-position-text"),
     keyboards.select_position_keyboard(),

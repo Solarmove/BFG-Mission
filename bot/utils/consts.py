@@ -29,5 +29,3 @@ positions_map: dict[POSITION_TITLES, int] = {
     "Працівник складу": 5,
     "Флорист": 5,
 }
-
-

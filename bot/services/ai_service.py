@@ -1,10 +1,7 @@
 import asyncio
 import logging
 import time
-from pprint import pprint
 
-import backoff
-import openai
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.types import Message
 from pydantic import ValidationError
@@ -97,5 +94,3 @@ async def run_ai_generation_with_loader(
     finally:
         loading_task.cancel()
     return formated_ai_response
-
-

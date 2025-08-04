@@ -3,11 +3,10 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Optional
 
-import pytz
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 
-from configreader import config
+from configreader import config, KYIV
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +55,7 @@ class LogService:
         :param extra_info: Optional dictionary with additional information.
         :return: Formatted message string.
         """
-        tz_info = pytz.timezone('Europe/Kyiv')
-        timestamp = datetime.now(tz_info).strftime("%d/%m/%Y %H:%M:%S")
+        timestamp = datetime.now().replace(tzinfo=KYIV).strftime("%d/%m/%Y %H:%M:%S")
         formatted_msg = f"{level.value}\n📅 {timestamp}\n💬 {message}"
 
         if extra_info:

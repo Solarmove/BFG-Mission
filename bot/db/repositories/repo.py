@@ -1,6 +1,5 @@
 import datetime
 
-import pytz
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -20,6 +19,7 @@ from bot.entities.shared import TaskReadExtended
 from bot.entities.task import TaskRead
 from bot.utils.enum import TaskStatus
 from bot.utils.repository import SQLAlchemyRepository
+from configreader import KYIV
 
 
 class UserRepo(SQLAlchemyRepository):
@@ -140,8 +140,7 @@ class WorkScheduleRepo(SQLAlchemyRepository):
         return res.scalars().all()
 
     async def get_count_of_users_on_shift(self):
-        tz_info = pytz.timezone("Europe/Kyiv")
-        datetime_now = datetime.datetime.now(tz_info)
+        datetime_now = datetime.datetime.now().replace(tzinfo=KYIV)
         stmt = (
             select(func.count(self.model.id))
             .where(
@@ -189,20 +188,24 @@ class TaskRepo(SQLAlchemyRepository):
             task_model.model_dump(
                 exclude={
                     "creator": {
-                        "position": {"hierarchy_level": {
+                        "position": {
+                            "hierarchy_level": {
                                 "create_task_prompt",
                                 "work_schedule_prompt",
                                 "category_prompt",
                                 "analytics_prompt",
-                            }}
+                            }
+                        }
                     },
                     "executor": {
-                        "position": {"hierarchy_level": {
+                        "position": {
+                            "hierarchy_level": {
                                 "create_task_prompt",
                                 "work_schedule_prompt",
                                 "category_prompt",
                                 "analytics_prompt",
-                            }}
+                            }
+                        }
                     },
                 },
             )

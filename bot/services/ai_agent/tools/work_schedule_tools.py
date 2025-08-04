@@ -1,15 +1,11 @@
 import datetime
 import logging
-from typing import Any, Coroutine, Callable
 
-from langchain_core.runnables import Runnable
-from langchain_core.tools import tool, BaseTool
+from langchain_core.tools import tool
 
-from bot.db.models.models import WorkSchedule
 from bot.entities.other import ScheduleCreationResult
 from bot.entities.users import WorkScheduleCreate, WorkScheduleRead, WorkScheduleUpdate
 from .base import BaseTools
-from ..entities import WorkScheduleToolsData
 
 logger = logging.getLogger(__name__)
 

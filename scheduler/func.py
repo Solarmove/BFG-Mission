@@ -95,4 +95,3 @@ async def send_notification(
                 core=core,
                 bot=bot,
             )
-
