@@ -18,6 +18,9 @@ async def send_task_ending_soon_notification(
     core: FluentRuntimeCore,
     bot: Bot,
 ):
+    if task_model_extended.status != TaskStatus.IN_PROGRESS:
+        logger.info(f"Unnecessary notification for task {task_model_extended.id} ")
+        return
     locale = await get_user_locale(task_model_extended.executor_id)
     message_text = core.get(
         "task_ending_soon_executor_notification",
@@ -46,7 +49,11 @@ async def send_task_overdue_notification(
             task_model_extended.executor.full_name
             or task_model_extended.executor.full_name_tg
         )
-    if task_model_extended.status == TaskStatus.OVERDUE:
+    if task_model_extended.status in [
+        TaskStatus.OVERDUE,
+        TaskStatus.COMPLETED,
+        TaskStatus.CANCELED,
+    ]:
         logger.info(f"Unnecessary notification for task {task_model_extended.id} ")
         return
 

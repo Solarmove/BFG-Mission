@@ -116,7 +116,7 @@ async def done_task_callback(
         await call.answer(i18n.get("task_not_for_you"), show_alert=True)
         return
     if task_model_extended.status != TaskStatus.IN_PROGRESS:
-        await call.answer(i18n.get("task_already_completed"), show_alert=True)
+        await call.answer(i18n.get("task-already-completed-or-canceled"), show_alert=True)
         return
     await dialog_manager.start(
         CompleteTask.enter_report_text,
