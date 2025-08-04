@@ -1,3 +1,4 @@
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -5,6 +6,17 @@ from configreader import config
 
 engine = create_async_engine(str(config.db_config.postgres_dsn))
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def set_timezone(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("SET TIME ZONE 'Europe/Kyiv'")
+    except Exception:
+        cursor.execute("SET TIME ZONE 'Europe/Kiev'")
+    cursor.close()
 
 
 class Base(DeclarativeBase):
