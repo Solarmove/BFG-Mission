@@ -6,22 +6,22 @@ from bot.utils.enum import TaskStatus
 from configreader import KYIV
 
 
-class BaseTaskModel(BaseModel):
-    @field_validator(
-        "start_datetime",
-        "end_datetime",
-        "completed_datetime",
-        mode="before",
-        check_fields=False,
-    )
-    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
-        if isinstance(v, datetime.datetime):
-            v = v.replace(tzinfo=KYIV)
-        return v
+# class BaseTaskModel(BaseModel):
+#     @field_validator(
+#         "start_datetime",
+#         "end_datetime",
+#         "completed_datetime",
+#         mode="before",
+#         check_fields=False,
+#     )
+#     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+#         if isinstance(v, datetime.datetime):
+#             v = v.replace(tzinfo=KYIV)
+#         return v
+#
 
 
-
-class TaskRead(BaseTaskModel):
+class TaskRead(BaseModel):
     """Модель для читання даних завдання."""
 
     id: int
@@ -51,8 +51,20 @@ class TaskRead(BaseTaskModel):
     status: TaskStatus = TaskStatus.NEW
     """Статус завдання. За замовчуванням NEW."""
 
+    @field_validator(
+        "start_datetime",
+        "end_datetime",
+        "completed_datetime",
+        mode="before",
+        check_fields=False,
+    )
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
+        return v
 
-class TaskCreate(BaseTaskModel):
+
+class TaskCreate(BaseModel):
     """Модель для створення нового завдання."""
 
     creator_id: int
@@ -81,14 +93,19 @@ class TaskCreate(BaseTaskModel):
 
     task_control_points: list["TaskControlPointCreate"] | None = None
 
-    @field_validator("start_datetime", "end_datetime", mode="before")
+    @field_validator(
+        "start_datetime",
+        "end_datetime",
+        mode="before",
+        check_fields=False,
+    )
     def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
         if isinstance(v, datetime.datetime):
             v = v.replace(tzinfo=KYIV)
         return v
 
 
-class TaskUpdate(BaseTaskModel):
+class TaskUpdate(BaseModel):
     """Модель для оновлення існуючого завдання."""
 
     id: int
