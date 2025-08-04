@@ -107,6 +107,8 @@ async def done_task_callback(
     uow: UnitOfWork,
     dialog_manager: DialogManager,
     i18n: I18nContext,
+    bot: Bot,
+    channel_log: LogService,
 ):
     task_id = int(call.data.split(":")[1])
     task_model_dict: dict = await uow.tasks.get_task_by_id(task_id)
@@ -115,8 +117,40 @@ async def done_task_callback(
     if task_model_extended.executor_id != call.from_user.id:
         await call.answer(i18n.get("task_not_for_you"), show_alert=True)
         return
+    if task_model_extended.status == TaskStatus.NEW:
+        try:
+            await uow.tasks.edit_one(
+                id=task_id, data=dict(status=TaskStatus.IN_PROGRESS)
+            )
+            await uow.commit()
+        except Exception as e:
+            logger.info(f"Error while confirming task: {e}")
+            await call.answer(i18n.get("task-confirmed-error"))
+            await channel_log.error(
+                "Помилка при підтвердженні завдання",
+                extra_info={
+                    "Завдання": task_model_extended.title,
+                    "Помилка": f"<blockquote>{e}</blockquote>",
+                    "Виконавець": task_model_extended.executor.full_name
+                    or task_model_extended.executor.full_name_tg,
+                },
+            )
+            return
+        await send_message(
+            bot,
+            task_model_extended.creator_id,
+            text=i18n.get(
+                "task-confirmed-notification",
+                task_title=task_model_extended.title,
+                executor_full_name=task_model_extended.executor.full_name
+                or task_model_extended.executor.full_name_tg,
+            ),
+        )
+        task_model_extended.status = TaskStatus.IN_PROGRESS
     if task_model_extended.status != TaskStatus.IN_PROGRESS:
-        await call.answer(i18n.get("task-already-completed-or-canceled"), show_alert=True)
+        await call.answer(
+            i18n.get("task-already-completed-or-canceled"), show_alert=True
+        )
         return
     await dialog_manager.start(
         CompleteTask.enter_report_text,
