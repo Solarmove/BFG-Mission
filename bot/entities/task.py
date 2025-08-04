@@ -8,8 +8,11 @@ from configreader import KYIV
 
 class BaseTaskModel(BaseModel):
     @field_validator(
-        "start_datetime", "end_datetime", "completed_datetime", mode="before",
-        check_fields=False
+        "start_datetime",
+        "end_datetime",
+        "completed_datetime",
+        mode="before",
+        check_fields=False,
     )
     def normalize_to_kyiv(cls, v: datetime) -> datetime:
         if v is None:
@@ -79,10 +82,9 @@ class TaskCreate(BaseTaskModel):
     task_control_points: list["TaskControlPointCreate"] | None = None
 
     @field_validator("start_datetime", "end_datetime", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
 
 
