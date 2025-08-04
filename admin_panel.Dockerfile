@@ -1,7 +1,18 @@
 FROM python:3.12-slim-bookworm
 
-# The installer requires curl (and certificates) to download the release archive
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+
+ARG TZ=Europe/Kyiv
+ENV TZ=${TZ} \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH="/root/.local/bin/:$PATH"
+
+# установить tzdata + curl/сертификаты и задать зону
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata curl ca-certificates \
+    && ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime \
+    && echo "${TZ}" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 # Download the latest installer
 ADD https://astral.sh/uv/install.sh /uv-installer.sh

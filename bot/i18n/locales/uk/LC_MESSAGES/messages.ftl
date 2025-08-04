@@ -276,7 +276,7 @@ file-required-error = 📂Файл обов'язковий. Додайте хо�
 confirm-complete-task-text = ⚠️ Ви впевнені, що хочете завершити завдання <b>{$task_title}</b>?
     Цю дію не можна буде скасувати.
 task-completed-error = ❌Помилка завершення завдання
-task-completed-in-time-notification = ✅ Працівник <b>{$executor_full_name}</b> виконав задачу <b>{$task_title}</b> вчасно
+task-completed-in-time-notification = ✅ Працівник <b>{$executor_full_name}</b> виконавм задачу <b>{$task_title}</b> вчасно
     Звіт: <i>{$report_text}</i>
 task-completed-overdue-notification = ⚠️ Працівник <b>{$executor_full_name}</b> виконав задачу <b>{$task_title}</b> запізненням {$overdue_time}
     Звіт: <i>{$report_text}</i>

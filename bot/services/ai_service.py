@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from pprint import pprint
 
 import backoff
@@ -38,7 +39,9 @@ async def generate_llm_response(
     without_user_id: bool = False,
 ):
     try:
-        llm_response = await ai_agent.invoke(raw_ai_response, with_history, without_user_id)
+        llm_response = await ai_agent.invoke(
+            raw_ai_response, with_history, without_user_id
+        )
         return llm_response
     except ValidationError as e:
         await log_service.log_exception(e, extra_info={"message_text": raw_ai_response})
@@ -52,11 +55,14 @@ async def generate_llm_response(
 
 async def loading_text_decoration(message: Message):
     stages = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-
+    start_time = time.time()
     while True:
         for stage in stages:
+            elapsed_time = time.time() - start_time
             try:
-                await message.edit_text(f"{stage} Опрацьовуємо відповідь...")
+                await message.edit_text(
+                    f"{stage} Опрацьовуємо відповідь... ({elapsed_time:.1f} сек.)"
+                )
             except TelegramRetryAfter as e:
                 logging.info("TelegramRetryAfter: %s", e)
                 await asyncio.sleep(e.retry_after)
