@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -8,7 +10,7 @@ engine = create_async_engine(str(config.db_config.postgres_dsn))
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
-logger = config.logger.get_logger(__name__)
+logger = logging.get_logger(__name__)
 
 
 class Base(DeclarativeBase):
