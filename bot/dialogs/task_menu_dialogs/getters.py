@@ -58,7 +58,7 @@ async def my_tasks_getter(
     i18n: I18nContext,
     **kwargs: dict,
 ):
-    tz_info = pytz.timezone('Europe/Kyiv')
+    tz_info = pytz.timezone("Europe/Kyiv")
     task_type = dialog_manager.dialog_data.get("task_type")
     task_direction = dialog_manager.dialog_data.get("task_direction", "income")
     if task_direction == "outcome":
@@ -110,7 +110,7 @@ async def my_tasks_getter(
         "task_list": [
             (
                 task.id,
-                f"{'🔥' if is_task_hot(task.end_datetime) else ''}"
+                f"{'🔥' if is_task_hot(task.end_datetime + datetime.timedelta(hours=3)) else ''}"
                 f"{task_status_mapper.get(task.status, '')} {task.title} ",
             )
             for task in my_tasks
@@ -183,8 +183,12 @@ async def get_task(
         else i18n.get("task-no-reports"),
         "task_title": task.title,
         "task_description": task.description or i18n.get("task-no-description"),
-        "task_start_datetime": task.start_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
-        "task_end_datetime": task.end_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M"),
+        "task_start_datetime": (
+            task.start_datetime + datetime.timedelta(hours=3)
+        ).strftime("%d.%m.%Y, %H:%M"),
+        "task_end_datetime": (task.end_datetime + datetime.timedelta(hours=3)).strftime(
+            "%d.%m.%Y, %H:%M"
+        ),
         "task_category": task.category.name
         if task.category
         else i18n.get("task-no-category"),
@@ -200,14 +204,14 @@ async def get_task(
         "task_creator": task.creator.full_name or task.creator.full_name_tg,
         "task_executor": task.executor.full_name or task.executor.full_name_tg,
         "task_completed_datetime": (
-            task.completed_datetime.replace(tzinfo=tz_info).strftime("%d.%m.%Y, %H:%M")
-            if task.completed_datetime
-            else i18n.get("task-not-completed")
-        ),
+            task.completed_datetime + datetime.timedelta(hours=3)
+        ).strftime("%d.%m.%Y, %H:%M")
+        if task.completed_datetime
+        else i18n.get("task-not-completed"),
         "control_points": "\n".join(
             f'▶️ {index + 1}. "{cp.description}"\n'
-            f"<b>Дедлайн</b>: <i>{cp.deadline.replace(tzinfo=tz_info).strftime('%d.%m.%Y, %H:%M')}</i>\n"
-            f"<b>Виконано:</b> {cp.datetime_complete.replace(tzinfo=tz_info).strftime('%d.%m.%Y, %H:%M') if cp.datetime_complete else i18n.get('control-point-not-completed')}"
+            f"<b>Дедлайн</b>: <i>{(cp.deadline + datetime.timedelta(hours=3)).strftime('%d.%m.%Y, %H:%M')}</i>\n"
+            f"<b>Виконано:</b> {(cp.datetime_complete + datetime.timedelta(hours=3)).strftime('%d.%m.%Y, %H:%M') if cp.datetime_complete else i18n.get('control-point-not-completed')}"
             for index, cp in enumerate(task.control_points)
         )
         if task.control_points
