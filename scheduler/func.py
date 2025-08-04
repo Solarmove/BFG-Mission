@@ -49,7 +49,10 @@ async def send_notification(
     core = ctx["core"]
     locale = await get_user_locale(user_id)
     async with uow:
-        task_model_dict = await uow.tasks.get_task_by_id(task_id)
+        task_model_dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
+        if not task_model_dict:
+            logger.warning(f"Task with ID {task_id} not found in the database.")
+            return
         task_model_extended = TaskReadExtended.model_validate(task_model_dict)
         if task_model_extended.status in [
             TaskStatus.COMPLETED,
