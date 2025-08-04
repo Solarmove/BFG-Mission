@@ -76,11 +76,11 @@ class WorkScheduleRead(BaseModel):
     date: datetime.date
 
     @field_validator("start_time", "end_time", "date", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class WorkScheduleUpdate(BaseModel):
@@ -94,11 +94,11 @@ class WorkScheduleUpdate(BaseModel):
     """Дата робочого графіку. Може бути `None`, якщо не потрібно змінювати."""
 
     @field_validator("start_time", "end_time", "date", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class WorkScheduleCreate(BaseModel):
@@ -114,8 +114,7 @@ class WorkScheduleCreate(BaseModel):
     """Дата робочого графіку."""
 
     @field_validator("start_time", "end_time", "date", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v

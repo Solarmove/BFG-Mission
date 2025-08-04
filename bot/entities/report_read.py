@@ -19,8 +19,7 @@ class TaskReportRead(BaseModel):
     created_at: datetime.datetime
 
     @field_validator("created_at", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v

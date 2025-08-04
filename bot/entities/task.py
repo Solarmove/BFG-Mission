@@ -14,11 +14,11 @@ class BaseTaskModel(BaseModel):
         mode="before",
         check_fields=False,
     )
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class TaskRead(BaseTaskModel):
@@ -110,11 +110,11 @@ class TaskUpdate(BaseTaskModel):
     """Чи потрібен файл звіт при виконанні завдання? За замовчуванням False"""
 
     @field_validator("start_datetime", "end_datetime", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class TaskControlPointRead(BaseModel):
@@ -128,11 +128,11 @@ class TaskControlPointRead(BaseModel):
     description: str | None = None
 
     @field_validator("datetime_complete", "deadline", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class TaskControlPointCreate(BaseModel):
@@ -145,11 +145,11 @@ class TaskControlPointCreate(BaseModel):
     """Опис контрольної точки звіту, що повинно бути зроблено або будь які інші деталі, які потрібно врахувати при звіті"""
 
     @field_validator("deadline", mode="before")
-    def normalize_to_kyiv(cls, v: datetime) -> datetime:
-        if v is None:
-            return v
-        v = v.replace(tzinfo=KYIV)
+    def normalize_to_kyiv(cls, v: datetime.datetime) -> datetime:
+        if isinstance(v, datetime.datetime):
+            v = v.replace(tzinfo=KYIV)
         return v
+
 
 
 class TaskCategoryRead(BaseModel):
