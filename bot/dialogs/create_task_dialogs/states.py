@@ -40,3 +40,4 @@ class CreateRegularTasks(StatesGroup):
     """
 
     send_csv_file = State()
+    show_result = State()

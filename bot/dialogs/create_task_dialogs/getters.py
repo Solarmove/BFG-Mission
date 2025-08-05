@@ -2,13 +2,16 @@ import datetime
 from pprint import pprint
 from typing import Sequence
 
+from aiogram.enums import ContentType
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram.types import User
+from aiogram_dialog.api.entities import MediaAttachment
 from arq import ArqRedis
 
 from bot.db.models.models import User as UserDB, TaskCategory, WorkSchedule
 from bot.entities.task import TaskCreate, TaskControlPointCreate
 from bot.services.ai_agent.tools import TaskTools
+from bot.services.create_task_with_csv import create_regular_tasks_template
 from bot.utils.unitofwork import UnitOfWork
 
 
@@ -250,4 +253,42 @@ async def get_control_points(
             (index, f"🗑️Контрольна точка {index + 1}")
             for index, cp in enumerate(control_points_list)
         ],
+    }
+
+
+async def excel_file_getter(
+    dialog_manager: DialogManager, uow: UnitOfWork, event_from_user: User, **kwargs
+):
+    my_hierarchy_level = await uow.users.get_user_hierarchy_level(event_from_user.id)
+    all_users_models: Sequence[UserDB] = await uow.users.get_users_without_me(
+        event_from_user.id, my_hierarchy_level
+    )
+    path_to_file = create_regular_tasks_template(all_users_models)
+    media = MediaAttachment(
+        type=ContentType.DOCUMENT,
+        path=path_to_file,
+    )
+    return {
+        "csv_file": media,
+    }
+
+
+async def get_pared_data(
+    dialog_manager: DialogManager,
+    event_from_user: User,
+    uow: UnitOfWork,
+    **kwargs,
+):
+    result = dialog_manager.dialog_data["parsing_csv_result"]
+    errors = result.get("errors", [])
+    return {
+        "csv_file": MediaAttachment(
+            type=ContentType.DOCUMENT,
+            path=result.get("error_report_path"),
+        )
+        if result.get("error_report_path")
+        else None,
+        "errors": errors,
+        "created_count": result.get("tasks_created"),
+        "errors_count": len(errors),
     }

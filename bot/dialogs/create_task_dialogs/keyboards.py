@@ -8,6 +8,9 @@ from aiogram_dialog.widgets.kbd import (
     Button,
     Start,
     Checkbox,
+    PrevPage,
+    CurrentPage,
+    NextPage,
 )  # noqa: F401
 from aiogram_dialog.widgets.text import Format
 from magic_filter import F
@@ -143,4 +146,16 @@ def delete_control_points_kb():
         hide_on_single_page=True,
         height=6,
         width=1,
+    )
+
+
+def scroll_kb(scroll_id: str):
+    return Row(
+        PrevPage(text=Format("<"), scroll=scroll_id, when=F["pages"] > 1),
+        CurrentPage(
+            text=Format("{current_page1}/{pages}"),
+            scroll=scroll_id,
+            when=F["pages"] > 1,
+        ),
+        NextPage(text=Format(">"), scroll=scroll_id, when=F["pages"] > 1),
     )

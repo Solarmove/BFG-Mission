@@ -1,4 +1,4 @@
-from aiogram_dialog import Dialog  # noqa: F401
+from aiogram_dialog import Dialog, LaunchMode  # noqa: F401
 from . import windows  # noqa: F401
 
 
@@ -17,6 +17,7 @@ dialogs = [
         windows.need_add_control_point_window,
         windows.done_create_single_task_window,
         on_process_result=windows.on_process_result,
+        launch_mode=LaunchMode.SINGLE_TOP,
     ),
     Dialog(
         windows.enter_cp_description_window,
@@ -24,5 +25,9 @@ dialogs = [
         windows.enter_cp_deadline_time_window,
         windows.add_more_cp_window,
         on_process_result=windows.on_process_result,
+    ),
+    Dialog(
+        windows.send_regular_tasks_csv_file_window,
+        windows.show_parse_regular_tasks_result_window,
     ),
 ]

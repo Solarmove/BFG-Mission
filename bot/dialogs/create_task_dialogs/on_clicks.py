@@ -1,6 +1,8 @@
 import datetime
+import os.path
 from _pydatetime import date
 
+from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -12,7 +14,9 @@ from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa:
 from aiogram_dialog import DialogManager, ShowMode, ChatEvent  # noqa: F401
 
 from ...db.models.models import WorkSchedule
+from ...exceptions.user_exceptions import InvalidCSVFile
 from ...keyboards.ai import exit_ai_agent_kb
+from ...services.create_task_with_csv import parse_regular_tasks_csv
 from ...states.ai import AIAgentMenu
 from ...utils.unitofwork import UnitOfWork
 
@@ -610,3 +614,45 @@ async def on_delete_control_point(
         del task_control_points[item_id]
         manager.dialog_data["task_control_points"] = task_control_points
         await call.answer("🗑️Контрольна точка видалена")
+
+
+async def on_send_csv_file_click(
+    message: Message,
+    widget: MessageInput,
+    manager: DialogManager,
+):
+    if not message.document:
+        await message.answer("Будь ласка, надішліть CSV файл.")
+        return
+    bot: Bot = manager.middleware_data["bot"]
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    path_to_file = os.path.join(
+        "csv_files", f"regular_tasks_{message.from_user.id}.csv"
+    )
+    await bot.download(
+        message.document.file_id,
+        os.path.join("csv_files", f"regular_tasks_{message.from_user.id}.csv"),
+    )
+    try:
+        result = await parse_regular_tasks_csv(path_to_file, uow)
+        manager.dialog_data["parsing_csv_result"] = result
+    except InvalidCSVFile as e:
+        await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
+        return
+    await manager.next()
+
+
+async def on_recheck_csv_file_click(
+    message: Message,
+    widget: MessageInput,
+    manager: DialogManager,
+):
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    path_to_file = os.path.join(
+        "csv_files", f"regular_tasks_{message.from_user.id}.csv"
+    )
+    try:
+        result = await parse_regular_tasks_csv(path_to_file, uow)
+        manager.dialog_data["parsing_csv_result"] = result
+    except InvalidCSVFile as e:
+        await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")

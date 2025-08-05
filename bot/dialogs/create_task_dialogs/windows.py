@@ -1,8 +1,10 @@
 from pprint import pprint
 
+from aiogram.enums import ContentType
 from aiogram_dialog import StartMode, Window, Data, DialogManager
-from aiogram_dialog.widgets.input import TextInput
+from aiogram_dialog.widgets.input import TextInput, MessageInput
 from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Next, Start
+from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Format, Multi, List, Const
 from magic_filter import F
 
@@ -278,3 +280,35 @@ async def on_process_result(data: Data, result: dict, manager: DialogManager):
         manager.dialog_data["task_control_points"] = result.get(
             "task_control_points", []
         )
+
+
+send_regular_tasks_csv_file_window = Window(
+    I18nFormat("send-regular-tasks-csv-file-text"),
+    DynamicMedia(selector="csv_file"),
+    MessageInput(
+        func=on_clicks.on_send_csv_file_click, content_types=[ContentType.DOCUMENT]
+    ),
+    Cancel(I18nFormat("back-btn")),
+    state=states.CreateRegularTasks.send_csv_file,
+    getter=getters.excel_file_getter,
+)
+
+
+show_parse_regular_tasks_result_window = Window(
+    Multi(
+        I18nFormat("parse-regular-tasks-result-text"),
+        Format(
+            "Виправіть помилки у файлі знизу та надішліть його знову.",
+            when="errors",
+        ),
+        sep="\n",
+    ),
+    DynamicMedia(selector="csv_file", when=F["csv_file"]),
+    MessageInput(
+        func=on_clicks.on_recheck_csv_file_click, content_types=[ContentType.DOCUMENT]
+    ),
+    Back(I18nFormat("back-btn")),
+    Cancel(I18nFormat("back-to-main-menu-btn")),
+    state=states.CreateRegularTasks.show_result,
+    getter=getters.get_pared_data,
+)
