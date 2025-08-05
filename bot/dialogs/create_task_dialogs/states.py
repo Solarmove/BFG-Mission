@@ -39,4 +39,4 @@ class CreateRegularTasks(StatesGroup):
     State for creating multiple tasks.
     """
 
-    ...
+    send_csv_file = State()

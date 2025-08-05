@@ -1,14 +1,14 @@
-from aiogram_dialog import StartMode, Window, Data, DialogManager  # noqa: F401
-from aiogram_dialog.widgets.input import MessageInput, TextInput  # noqa: F401
-from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Next, Start  # noqa: F401
-from aiogram_dialog.widgets.text import Const, Format, Multi  # noqa: F401
+from aiogram_dialog import StartMode, Window, Data, DialogManager
+from aiogram_dialog.widgets.input import TextInput
+from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Next, Start
+from aiogram_dialog.widgets.text import Const, Format, Multi, List
 from magic_filter import F
 
-from ...i18n.utils.i18n_format import I18nFormat  # noqa: F401
+from ...i18n.utils.i18n_format import I18nFormat
 from ...utils.calendar import CustomCalendar
 from ..categories_menu_dialogs.keyboards import select_category_keyboard
 from ..main_menu_dialogs.states import MainMenu
-from . import getters, keyboards, on_clicks, states  # noqa: F401
+from . import getters, keyboards, on_clicks, states
 
 create_task_menu_window = Window(
     I18nFormat("select-type-task-creation-text"),
@@ -91,6 +91,7 @@ enter_start_date_time_window = Window(
     ),
     Back(Const("back-btn")),
     state=states.CreateSingleTask.select_start_date_time,
+    getter=getters.start_time_getter,
 )
 
 
@@ -154,7 +155,16 @@ select_report_media_required_window = Window(
 )
 
 need_add_control_point_window = Window(
-    I18nFormat("need-add-control-point-text"),
+    Multi(
+        I18nFormat("need-add-control-point-text"),
+        List(
+            Format("{item}"),
+            items="task_control_points_text",
+            id="task_control_points_list",
+            page_size=1,
+        ),
+    ),
+    keyboards.delete_control_points_kb(),
     Next(
         I18nFormat("without-control-point-btn"),
         id="without_control_point",
@@ -167,6 +177,7 @@ need_add_control_point_window = Window(
     ),
     Back(Const("back-btn")),
     state=states.CreateSingleTask.need_add_control_point,
+    getter=getters.get_control_points,
 )
 
 
@@ -174,6 +185,7 @@ done_create_single_task_window = Window(
     Multi(
         I18nFormat("done-create-single-task-text"),
         I18nFormat("new-task-data-text"),
+        sep="\n\n",
     ),
     Start(
         I18nFormat("add-one-more-task-btn"),

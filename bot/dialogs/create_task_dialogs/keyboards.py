@@ -33,9 +33,9 @@ def create_task_menu_kb():
                 state=states.CreateSingleTask.enter_task_title,
             ),
             Start(
-                I18nFormat("create-many-tasks-btn"),
-                id="create_many_tasks_btn",
-                state=states.CreateRegularTasks,
+                I18nFormat("create-regular-tasks-btn"),
+                id="create_regular_tasks_btn",
+                state=states.CreateRegularTasks.send_csv_file,
             ),
         ),
     )
@@ -44,7 +44,7 @@ def create_task_menu_kb():
 def select_executor_keyboard():
     return ScrollingGroup(
         Select(
-            Format("{item[1]}"),
+            Format("{item[1]} ({item[2]})"),
             id="select_executor",
             items="executors_list",
             item_id_getter=operator.itemgetter(0),
@@ -86,32 +86,60 @@ def quick_start_times_kb():
             I18nFormat("time-start-now-btn"),
             id="start_now",
             on_click=on_clicks.on_select_time_start_now,
-            when="show_start_now_btn",
+            when="show_quick_btn",
         ),
         Button(
             I18nFormat("time-start-15-min-btn"),
             id="quick_time_15m",
             on_click=on_clicks.on_quick_time_15m,
+            when="show_quick_btn",
         ),
         Button(
             I18nFormat("time-start-30-min-btn"),
             id="quick_time_30m",
             on_click=on_clicks.on_quick_time_30m,
+            when="show_quick_btn",
         ),
         Button(
             I18nFormat("time-start-1-hour-btn"),
             id="quick_time_1h",
             on_click=on_clicks.on_quick_time_1h,
+            when="show_quick_btn",
         ),
         Button(
             I18nFormat("time-start-2-hours-btn"),
             id="quick_time_2h",
             on_click=on_clicks.on_quick_time_2h,
-        ),
-        Button(
-            I18nFormat("time-start-1-day-btn"),
-            id="quick_time_1d",
-            on_click=on_clicks.on_quick_time_1d,
+            when="show_quick_btn",
         ),
         width=2,
+    )
+
+
+def quick_end_times_kb():
+    return Group(
+        Button(
+            I18nFormat("time-to-schedule-end-btn"),
+            id="time-to-schedule-end-btn",
+            on_click=on_clicks.on_time_to_schedule_end,
+            when="show_quick_btn",
+        ),
+        width=2,
+    )
+
+
+def delete_control_points_kb():
+    return ScrollingGroup(
+        Select(
+            Format("{item}"),
+            id="delete_control_point",
+            items="control_points_list",
+            item_id_getter=operator.itemgetter(0),
+            on_click=on_clicks.on_delete_control_point,
+            type_factory=int,
+        ),
+        id="delete_control_point_scroll",
+        hide_on_single_page=True,
+        height=6,
+        width=1,
     )

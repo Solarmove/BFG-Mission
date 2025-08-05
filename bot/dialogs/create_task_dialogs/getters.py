@@ -123,7 +123,25 @@ async def save_task_before(
         user_id=event_from_user.id,
     )
     await task_tools.create_one_task_func(task_model)
-    return task_model.model_dump()
+    task_category = await uow.task_categories.find_one(id=task_model.category_id)
+    executor_model: UserDB = await uow.users.find_one(id=task_model.executor_id)
+    creator_model: UserDB = await uow.users.find_one(id=task_model.creator_id)
+    return {
+        "task_title": task_model.title,
+        "task_description": task_model.description,
+        "task_category": task_category.name if task_category else "Без категорії",
+        "task_executor": executor_model.full_name or executor_model.full_name_tg,
+        "task_creator": creator_model.full_name or creator_model.full_name_tg,
+        "task_start_datetime": f"{task_model.start_datetime:%Y-%m-%d %H:%M}",
+        "task_end_datetime": f"{task_model.end_datetime:%Y-%m-%d %H:%M}",
+        "task_photo_required": "✅" if task_model.photo_required else "❌",
+        "task_video_required": "✅" if task_model.video_required else "❌",
+        "task_file_required": "✅" if task_model.file_required else "❌",
+        "control_points": "".join(
+            f"\n{index + 1}. {cp.description} - {cp.deadline:%Y-%m-%d %H:%M}\n"
+            for index, cp in enumerate(task_model.task_control_points)
+        ),
+    }
 
 
 async def get_control_point_deadline_date_getter(
@@ -147,4 +165,34 @@ async def get_control_point_deadline_date_getter(
         "start_date": start_datetime.date(),
         "end_date": end_datetime.date(),
         "work_dates": [work_date.date for work_date in work_dates],
+    }
+
+
+async def start_time_getter(
+    dialog_manager: DialogManager, event_from_user: User, **kwargs
+):
+    datetime_now = datetime.datetime.now()
+    start_time_date_str = dialog_manager.dialog_data["selected_start_date"]
+    start_time_date = datetime.datetime.strptime(start_time_date_str, "%Y-%m-%d").date()
+    return {
+        "show_quick_btn": True if datetime_now.date() == start_time_date else False,
+    }
+
+
+async def get_control_points(
+    dialog_manager: DialogManager,
+    event_from_user: User,
+    uow: UnitOfWork,
+    **kwargs,
+):
+    control_points_list = dialog_manager.dialog_data.get("task_control_points", [])
+    return {
+        "task_control_points_text": [
+            f"{index}. {cp['description']} - {cp['deadline']}"
+            for index, cp in enumerate(control_points_list)
+        ],
+        "control_points_list": [
+            (index, f"🗑️Контрольна точка {index}")
+            for index, cp in enumerate(control_points_list)
+        ],
     }

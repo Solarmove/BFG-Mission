@@ -67,7 +67,7 @@ async def on_enter_task_description(
     message_text: str,
 ):
     i18n: I18nContext = manager.middleware_data["i18n"]
-    if len(message_text) > 1300:
+    if len(message_text) > 600:
         await message.answer(i18n.get("task-description-too-long-error"))
         return
     manager.dialog_data["description"] = message_text
@@ -402,3 +402,89 @@ async def on_back_to_cp_description_window(
     task_control_points = task_data.get("task_control_points", [])
     del task_control_points[-1]
     manager.dialog_data["task_control_points"] = task_control_points
+
+
+async def on_select_time_start_now(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    manager.dialog_data["start_time"] = now.strftime("%H:%M")
+    await manager.next()
+
+
+async def on_quick_time_15m(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(minutes=15)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    await manager.next()
+
+
+async def on_quick_time_30m(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(minutes=30)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    await manager.next()
+
+
+async def on_quick_time_1h(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(hours=1)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    await manager.next()
+
+
+async def on_quick_time_2h(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(hours=2)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    await manager.next()
+
+
+async def on_time_to_schedule_end(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    executor_id = manager.dialog_data["executor_id"]
+    selected_date = manager.dialog_data["selected_start_date"]
+    work_schedule = await uow.work_schedules.get_work_schedule_in_user_by_date(
+        executor_id, datetime.datetime.strptime(selected_date, "%Y-%m-%d").date()
+    )
+    if not work_schedule:
+        await call.answer("Робочий графік не знайдено.", show_alert=True)
+        return
+    manager.dialog_data["start_time"] = str(work_schedule.end_time)
+    await manager.next()
+
+
+async def on_delete_control_point(
+    call: CallbackQuery,
+    widget: Select,
+    manager: DialogManager,
+    item_id: int,
+):
+    task_data = manager.dialog_data
+    task_control_points = task_data.get("task_control_points", [])
+    if 0 <= item_id < len(task_control_points):
+        del task_control_points[item_id]
+        manager.dialog_data["task_control_points"] = task_control_points
+        await call.answer("🗑️Контрольна точка видалена")

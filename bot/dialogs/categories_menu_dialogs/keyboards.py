@@ -57,5 +57,5 @@ def select_category_keyboard(on_select_category):
         id="select_category_scroll",
         hide_on_single_page=True,
         height=6,
-        width=1,
+        width=2,
     )

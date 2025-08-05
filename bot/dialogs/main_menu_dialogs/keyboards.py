@@ -6,6 +6,7 @@ from aiogram_dialog.widgets.kbd import (
 from magic_filter import F
 
 from ..categories_menu_dialogs.states import CategoryMenu
+from ..create_task_dialogs.states import CreateTaskMenu
 
 from ..manage_personal_dialogs.states import (
     ManageWorkSchedule,
@@ -18,10 +19,10 @@ from . import on_clicks
 
 def main_menu_keyboard():
     return Group(
-        Button(
+        Start(
             I18nFormat("create-task-btn"),
             id="create_task",
-            on_click=on_clicks.on_start_create_task,
+            state=CreateTaskMenu.select_action,
         ),
         Group(
             Start(
