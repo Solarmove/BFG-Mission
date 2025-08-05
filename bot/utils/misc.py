@@ -40,9 +40,9 @@ async def voice_to_text(bot: Bot, message: Message) -> str:
 def is_task_hot(task_deadline: datetime) -> bool:
     """Проверяет, горячее ли задание"""
 
-    current_time = datetime.now().replace(tzinfo=KYIV)
+    current_datetime = datetime.now().replace(tzinfo=KYIV)
     task_deadline = task_deadline.replace(tzinfo=KYIV)
-    return task_deadline - current_time <= timedelta(minutes=30)
+    return task_deadline - current_datetime <= timedelta(minutes=30)
 
 
 def humanize_timedelta(td: timedelta) -> str:

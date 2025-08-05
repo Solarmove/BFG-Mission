@@ -34,7 +34,7 @@ class UserRepo(SQLAlchemyRepository):
                 self.model.id != my_user_id,
                 self.model.position.has(
                     Positions.hierarchy_level.has(
-                        HierarchyLevel.level <= my_hierarchy_level
+                        HierarchyLevel.level >= my_hierarchy_level
                     )
                 ),
             )
@@ -198,9 +198,16 @@ class WorkScheduleRepo(SQLAlchemyRepository):
             .order_by(self.model.start_time)
         )
         if start_time is not None:
-            stmt = stmt.where(self.model.start_time >= start_time)
+            stmt = stmt.where(
+                and_(
+                    self.model.start_time <= start_time,
+                    start_time <= self.model.end_time,
+                )
+            )
         if end_time is not None:
-            stmt = stmt.where(self.model.end_time <= end_time)
+            stmt = stmt.where(
+                and_(self.model.end_time >= end_time, end_time >= self.model.start_time)
+            )
         res = await self.session.execute(stmt)
         return res.scalars().first()
 
@@ -209,6 +216,8 @@ class WorkScheduleRepo(SQLAlchemyRepository):
         user_id: int,
         from_date: datetime.date | None = None,
         to_date: datetime.date | None = None,
+        from_time: datetime.time | None = None,
+        to_time: datetime.time | None = None,
     ):
         """Get all work schedules for a user."""
         stmt = (
@@ -220,6 +229,10 @@ class WorkScheduleRepo(SQLAlchemyRepository):
             stmt = stmt.where(self.model.date >= from_date)
         if to_date is not None:
             stmt = stmt.where(self.model.date <= to_date)
+        if from_time is not None:
+            stmt = stmt.where(self.model.start_time >= from_time)
+        if to_time is not None:
+            stmt = stmt.where(self.model.end_time <= to_time)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
@@ -324,6 +337,7 @@ class TaskRepo(SQLAlchemyRepository):
         status: TaskStatus | None = None,
         start_datetime: datetime.datetime | None = None,
         end_datetime: datetime.datetime | None = None,
+        date_find_to: datetime.date | None = None,
     ):
         """Get all tasks with optional filters."""
         stmt = select(self.model)
@@ -339,6 +353,8 @@ class TaskRepo(SQLAlchemyRepository):
             stmt = stmt.where(self.model.start_datetime >= start_datetime)
         if end_datetime is not None:
             stmt = stmt.where(self.model.end_datetime <= end_datetime)
+        if date_find_to is not None:
+            stmt = stmt.where(func.date(self.model.start_datetime) <= date_find_to)
         stmt = stmt.order_by(self.model.created_at.desc())
         res = await self.session.execute(stmt)
         result = res.scalars().all()

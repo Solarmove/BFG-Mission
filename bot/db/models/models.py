@@ -118,8 +118,8 @@ class WorkSchedule(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    start_time: Mapped[str] = mapped_column(TIME, nullable=False)
-    end_time: Mapped[str] = mapped_column(TIME, nullable=False)
+    start_time = mapped_column(TIME, nullable=False)
+    end_time = mapped_column(TIME, nullable=False)
     date = mapped_column(DATE, nullable=False)
 
     user: Mapped["User"] = Relationship(back_populates="work_schedules")

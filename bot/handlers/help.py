@@ -17,7 +17,7 @@ router.message.middleware(ThrottlingMiddleware(help=2.5))
 async def help_handler(
     message: Message, uow: UnitOfWork, dialog_manager: DialogManager, i18n: I18nContext
 ):
-    hierarchy_level = await uow.users.get_user_hierarchy_level(message.from_user.id)
+    hierarchy_level = await uow.users.get_work_schedule_data(message.from_user.id,,
     if hierarchy_level is None:
         return await message.answer("You are not registered in the system.")
     text_map = {

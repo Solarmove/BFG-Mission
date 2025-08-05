@@ -1,11 +1,12 @@
 import datetime
+from pprint import pprint
 from typing import Sequence
 
 from aiogram_dialog import DialogManager  # noqa: F401
 from aiogram.types import User
 from arq import ArqRedis
 
-from bot.db.models.models import User as UserDB, TaskCategory
+from bot.db.models.models import User as UserDB, TaskCategory, WorkSchedule
 from bot.entities.task import TaskCreate, TaskControlPointCreate
 from bot.services.ai_agent.tools import TaskTools
 from bot.utils.unitofwork import UnitOfWork
@@ -23,12 +24,30 @@ async def get_start_date_getter(
     dialog_manager: DialogManager, event_from_user: User, uow: UnitOfWork, **kwargs
 ):
     executor_id = dialog_manager.dialog_data["executor_id"]
-    work_dates = await uow.work_schedules.get_all_work_schedule_in_user(
-        int(executor_id)
+    datetime_now = datetime.datetime.now()
+    work_dates: Sequence[
+        WorkSchedule
+    ] = await uow.work_schedules.get_all_work_schedule_in_user(
+        int(executor_id),
+        from_date=datetime_now.date(),
     )
+    work_dates_list = [work_date.date for work_date in work_dates]
+    min_date = min(work_dates_list) if work_dates_list else datetime_now.date()
+    if min_date == datetime_now.date():
+        current_work_schedule = next(
+            (ws for ws in work_dates if ws.date == min_date), None
+        )
+        if current_work_schedule and not (
+            current_work_schedule.start_time
+            <= datetime_now.time()
+            <= current_work_schedule.end_time
+        ):
+            work_dates_list.remove(min_date)
+            min_date = min(work_dates_list) if work_dates_list else None
+    start_date = min_date
     return {
-        "start_date": datetime.datetime.now().date(),
-        "work_dates": [work_date.date for work_date in work_dates],
+        "start_date": start_date,
+        "work_dates": work_dates_list,
     }
 
 
@@ -71,9 +90,7 @@ async def get_executors_list(
 async def get_categories_list_getter(
     dialog_manager: DialogManager, event_from_user: User, uow: UnitOfWork, **kwargs
 ):
-    categories_list_model: Sequence[
-        TaskCategory
-    ] = await uow.task_categories.get_all_categories()
+    categories_list_model: Sequence[TaskCategory] = await uow.task_categories.find_all()
     return {
         "categories_list": [
             (category.id, category.name) for category in categories_list_model
@@ -100,21 +117,24 @@ async def save_task_before(
                 description=task_point.get("description", "Контрольна точка"),
             )
         )
+    selected_start_date = datetime.datetime.strptime(
+        f"{task_data['selected_start_date']} {task_data['start_time']}",
+        "%Y-%m-%d %H:%M",
+    )
+    selected_end_date = datetime.datetime.strptime(
+        f"{task_data['selected_end_date']} {task_data['end_time']}", "%Y-%m-%d %H:%M"
+    )
     task_model = TaskCreate(
         creator_id=event_from_user.id,
         executor_id=task_data["executor_id"],
         title=task_data["title"],
         description=task_data["description"],
-        start_datetime=datetime.datetime.strptime(
-            task_data["start_datetime"], "%Y-%m-%d %H:%M"
-        ),
-        end_datetime=datetime.datetime.strptime(
-            task_data["end_datetime"], "%Y-%m-%d %H:%M"
-        ),
+        start_datetime=selected_start_date,
+        end_datetime=selected_end_date,
         category_id=task_data.get("category_id"),
-        photo_required=task_data["photo_required"],
-        video_required=task_data["video_required"],
-        file_required=task_data["file_required"],
+        photo_required=task_data.get("photo_required", False),
+        video_required=task_data.get("video_required", False),
+        file_required=task_data.get("file_required", False),
         task_control_points=task_control_points,
     )
     task_tools = TaskTools(
@@ -138,7 +158,7 @@ async def save_task_before(
         "task_video_required": "✅" if task_model.video_required else "❌",
         "task_file_required": "✅" if task_model.file_required else "❌",
         "control_points": "".join(
-            f"\n{index + 1}. {cp.description} - {cp.deadline:%Y-%m-%d %H:%M}\n"
+            f"\n{index + 1}. {cp.description} - {cp.deadline:%Y-%m-%d %H:%M}"
             for index, cp in enumerate(task_model.task_control_points)
         ),
     }
@@ -169,13 +189,47 @@ async def get_control_point_deadline_date_getter(
 
 
 async def start_time_getter(
-    dialog_manager: DialogManager, event_from_user: User, **kwargs
+    dialog_manager: DialogManager, event_from_user: User, uow: UnitOfWork, **kwargs
 ):
     datetime_now = datetime.datetime.now()
     start_time_date_str = dialog_manager.dialog_data["selected_start_date"]
     start_time_date = datetime.datetime.strptime(start_time_date_str, "%Y-%m-%d").date()
+    executor_id = dialog_manager.dialog_data["executor_id"]
+    work_schedule: WorkSchedule = (
+        await uow.work_schedules.get_work_schedule_in_user_by_date(
+            executor_id, start_time_date
+        )
+    )
     return {
         "show_quick_btn": True if datetime_now.date() == start_time_date else False,
+        "start_time": work_schedule.start_time.strftime("%H:%M")
+        if work_schedule
+        else "00:00",
+        "end_time": work_schedule.end_time.strftime("%H:%M")
+        if work_schedule
+        else "23:59",
+    }
+
+
+async def end_time_getter(
+    dialog_manager: DialogManager, event_from_user: User, uow: UnitOfWork, **kwargs
+):
+    executor_id = dialog_manager.dialog_data["executor_id"]
+    end_time_date = datetime.datetime.strptime(
+        dialog_manager.dialog_data["selected_end_date"], "%Y-%m-%d"
+    ).date()
+    work_schedule: WorkSchedule = (
+        await uow.work_schedules.get_work_schedule_in_user_by_date(
+            executor_id, end_time_date
+        )
+    )
+    return {
+        "start_time": work_schedule.start_time.strftime("%H:%M")
+        if work_schedule
+        else "00:00",
+        "end_time": work_schedule.end_time.strftime("%H:%M")
+        if work_schedule
+        else "23:59",
     }
 
 
@@ -186,13 +240,14 @@ async def get_control_points(
     **kwargs,
 ):
     control_points_list = dialog_manager.dialog_data.get("task_control_points", [])
+    pprint(dialog_manager.dialog_data)
     return {
         "task_control_points_text": [
-            f"{index}. {cp['description']} - {cp['deadline']}"
+            f"🚩{index + 1}. {cp['description']} - {cp['deadline']}"
             for index, cp in enumerate(control_points_list)
         ],
         "control_points_list": [
-            (index, f"🗑️Контрольна точка {index}")
+            (index, f"🗑️Контрольна точка {index + 1}")
             for index, cp in enumerate(control_points_list)
         ],
     }

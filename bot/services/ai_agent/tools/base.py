@@ -21,7 +21,7 @@ class BaseTools(ABC):
         """
         async with self.uow:
             user_id = user_id or self.user_id
-            level = await self.uow.users.get_user_hierarchy_level(user_id=user_id)
+            level = await self.uow.users.get_user_hierarchy_level(user_id)
             return level
 
     @abstractmethod

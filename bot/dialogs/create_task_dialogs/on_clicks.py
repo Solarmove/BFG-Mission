@@ -11,6 +11,7 @@ from aiogram_dialog.widgets.kbd import Button, Select, ManagedCalendar, ManagedC
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
 from aiogram_dialog import DialogManager, ShowMode, ChatEvent  # noqa: F401
 
+from ...db.models.models import WorkSchedule
 from ...keyboards.ai import exit_ai_agent_kb
 from ...states.ai import AIAgentMenu
 from ...utils.unitofwork import UnitOfWork
@@ -117,6 +118,34 @@ async def is_time_in_work_schedule(
     return True
 
 
+async def time_not_in_work_time_message(
+    uow: UnitOfWork,
+    message: Message | CallbackQuery,
+    manager: DialogManager,
+    i18n: I18nContext,
+    date: str,
+):
+    user_work_schedule_on_date = (
+        await uow.work_schedules.get_work_schedule_in_user_by_date(
+            manager.dialog_data["executor_id"],
+            datetime.datetime.strptime(date, "%Y-%m-%d").date(),
+        )
+    )
+    text = i18n.get(
+        "time-not-in-work-schedule-error",
+        work_schedule_start_time=str(
+            user_work_schedule_on_date.start_time.strftime("%H:%M")
+        ),
+        work_schedule_end_time=str(
+            user_work_schedule_on_date.end_time.strftime("%H:%M")
+        ),
+    )
+    if isinstance(message, Message):
+        await message.answer(text)
+    elif isinstance(message, CallbackQuery):
+        await message.answer(text, show_alert=True)
+
+
 async def on_enter_time_start(
     message: Message,
     widget: ManagedTextInput,
@@ -134,20 +163,12 @@ async def on_enter_time_start(
         manager.dialog_data["executor_id"],
         manager.dialog_data["selected_start_date"],
     ):
-        user_work_schedule_on_date = (
-            await uow.work_schedules.get_work_schedule_in_user_by_date(
-                manager.dialog_data["executor_id"],
-                datetime.datetime.strptime(
-                    manager.dialog_data["selected_start_date"], "%Y-%m-%d"
-                ).date(),
-            )
-        )
-        await message.answer(
-            i18n.get(
-                "time-not-in-work-schedule-error",
-                work_schedule_start_time=user_work_schedule_on_date.start_time,
-                work_schedule_end_time=user_work_schedule_on_date.end_time,
-            )
+        await time_not_in_work_time_message(
+            uow,
+            message,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
         )
         return
 
@@ -183,20 +204,12 @@ async def on_enter_time_end(
         manager.dialog_data["executor_id"],
         manager.dialog_data["selected_end_date"],
     ):
-        user_work_schedule_on_date = (
-            await uow.work_schedules.get_work_schedule_in_user_by_date(
-                manager.dialog_data["executor_id"],
-                datetime.datetime.strptime(
-                    manager.dialog_data["selected_end_date"], "%Y-%m-%d"
-                ).date(),
-            )
-        )
-        await message.answer(
-            i18n.get(
-                "time-not-in-work-schedule-error",
-                work_schedule_start_time=user_work_schedule_on_date.start_time,
-                work_schedule_end_time=user_work_schedule_on_date.end_time,
-            )
+        await time_not_in_work_time_message(
+            uow,
+            message,
+            manager,
+            i18n,
+            manager.dialog_data["selected_end_date"],
         )
         return
     start_date_str = manager.dialog_data["selected_start_date"]
@@ -211,6 +224,159 @@ async def on_enter_time_end(
             await message.answer(i18n.get("end-time-before-start-time-error"))
             return
     manager.dialog_data["end_time"] = message_text
+    await manager.next()
+
+
+async def on_select_time_start_now(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    quick_time = datetime.datetime.now()
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    if not await is_time_in_work_schedule(
+        uow,
+        quick_time.strftime("%H:%M"),
+        manager.dialog_data["executor_id"],
+        manager.dialog_data["selected_start_date"],
+    ):
+        await time_not_in_work_time_message(
+            uow,
+            call,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
+        )
+        return
+    await manager.next()
+
+
+async def on_quick_time_15m(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(minutes=15)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    if not await is_time_in_work_schedule(
+        uow,
+        quick_time.strftime("%H:%M"),
+        manager.dialog_data["executor_id"],
+        manager.dialog_data["selected_start_date"],
+    ):
+        await time_not_in_work_time_message(
+            uow,
+            call,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
+        )
+        return
+    await manager.next()
+
+
+async def on_quick_time_30m(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(minutes=30)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    if not await is_time_in_work_schedule(
+        uow,
+        quick_time.strftime("%H:%M"),
+        manager.dialog_data["executor_id"],
+        manager.dialog_data["selected_start_date"],
+    ):
+        await time_not_in_work_time_message(
+            uow,
+            call,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
+        )
+        return
+    await manager.next()
+
+
+async def on_quick_time_1h(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(hours=1)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    if not await is_time_in_work_schedule(
+        uow,
+        quick_time.strftime("%H:%M"),
+        manager.dialog_data["executor_id"],
+        manager.dialog_data["selected_start_date"],
+    ):
+        await time_not_in_work_time_message(
+            uow,
+            call,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
+        )
+        return
+    await manager.next()
+
+
+async def on_quick_time_2h(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    now = datetime.datetime.now()
+    quick_time = now + datetime.timedelta(hours=2)
+    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    if not await is_time_in_work_schedule(
+        uow,
+        quick_time.strftime("%H:%M"),
+        manager.dialog_data["executor_id"],
+        manager.dialog_data["selected_start_date"],
+    ):
+        await time_not_in_work_time_message(
+            uow,
+            call,
+            manager,
+            i18n,
+            manager.dialog_data["selected_start_date"],
+        )
+        return
+    await manager.next()
+
+
+async def on_time_to_schedule_end(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    i18n: I18nContext = manager.middleware_data["i18n"]
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    selected_end_date_str = manager.dialog_data.get("selected_end_date")
+    selected_end_date = datetime.datetime.strptime(selected_end_date_str, "%Y-%m-%d")
+    work_schedule_model: WorkSchedule = (
+        await uow.work_schedules.get_work_schedule_in_user_by_date(
+            manager.dialog_data["executor_id"],
+            selected_end_date.date(),
+        )
+    )
+    manager.dialog_data["end_time"] = work_schedule_model.end_time.strftime("%H:%M")
     await manager.next()
 
 
@@ -236,6 +402,7 @@ async def on_enter_new_category_name(
         return
     uow: UnitOfWork = manager.middleware_data["uow"]
     category_id = await uow.task_categories.add_one(dict(name=message_text))
+    await uow.commit()
     manager.dialog_data["category_id"] = category_id
     await manager.next()
 
@@ -248,7 +415,7 @@ async def on_change_photo_required(
     manager.dialog_data["photo_required"] = not manager.dialog_data.get(
         "photo_required", False
     )
-    await manager.next()
+    # await manager.next()
 
 
 async def on_change_video_required(
@@ -259,7 +426,7 @@ async def on_change_video_required(
     manager.dialog_data["video_required"] = not manager.dialog_data.get(
         "video_required", False
     )
-    await manager.next()
+    # await manager.next()
 
 
 async def on_change_file_required(
@@ -270,7 +437,7 @@ async def on_change_file_required(
     manager.dialog_data["file_required"] = not manager.dialog_data.get(
         "file_required", False
     )
-    await manager.next()
+    # await manager.next()
 
 
 async def on_without_control_point(
@@ -278,7 +445,7 @@ async def on_without_control_point(
     widget: Button,
     manager: DialogManager,
 ):
-    manager.dialog_data.pop("control_point_id", None)
+    manager.dialog_data.pop("task_control_points", None)
 
 
 async def on_add_control_point(
@@ -333,28 +500,55 @@ async def on_enter_control_point_deadline_time(
     if not validate_time_format(message_text):
         await message.answer(i18n.get("invalid-time-format-error"))
         return
+    selected_cp_deadline_date = manager.dialog_data[
+        "selected_control_point_deadline_date"
+    ]
+    task_end_datetime = datetime.datetime.strptime(
+        manager.start_data["task_end_datetime"],
+        "%Y-%m-%d %H:%M",
+    )
+    task_start_datetime = datetime.datetime.strptime(
+        manager.start_data["task_start_datetime"], "%Y-%m-%d %H:%M"
+    )
     if not await is_time_in_work_schedule(
         uow,
         message_text,
         manager.start_data["executor_id"],
-        manager.dialog_data["selected_control_point_deadline_date"],
+        selected_cp_deadline_date,
     ):
         user_work_schedule_on_date = (
             await uow.work_schedules.get_work_schedule_in_user_by_date(
-                manager.dialog_data["executor_id"],
-                datetime.datetime.strptime(
-                    manager.dialog_data["selected_end_date"], "%Y-%m-%d"
-                ).date(),
+                manager.start_data["executor_id"],
+                task_end_datetime.date(),
             )
         )
         await message.answer(
             i18n.get(
                 "time-not-in-work-schedule-error",
-                work_schedule_start_time=user_work_schedule_on_date.start_time,
-                work_schedule_end_time=user_work_schedule_on_date.end_time,
+                work_schedule_start_time=str(
+                    user_work_schedule_on_date.start_time.strftime("%H:%M")
+                ),
+                work_schedule_end_time=str(
+                    user_work_schedule_on_date.end_time.strftime("%H:%M")
+                ),
             )
         )
         return
+    if task_start_datetime.date() == task_end_datetime.date():
+        entered_time = datetime.datetime.strptime(message_text, "%H:%M")
+        if (
+            entered_time.time() > task_end_datetime.time()
+            or entered_time.time() < task_start_datetime.time()
+        ):
+            await message.answer(
+                i18n.get(
+                    "control-point-time-out-of-task-range-error",
+                    task_start_datetime=task_start_datetime.strftime("%H:%M"),
+                    task_end_datetime=task_end_datetime.strftime("%H:%M"),
+                )
+            )
+            return
+
     manager.dialog_data["control_point_deadline_time"] = message_text
     await manager.next()
 
@@ -402,78 +596,6 @@ async def on_back_to_cp_description_window(
     task_control_points = task_data.get("task_control_points", [])
     del task_control_points[-1]
     manager.dialog_data["task_control_points"] = task_control_points
-
-
-async def on_select_time_start_now(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    now = datetime.datetime.now()
-    manager.dialog_data["start_time"] = now.strftime("%H:%M")
-    await manager.next()
-
-
-async def on_quick_time_15m(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    now = datetime.datetime.now()
-    quick_time = now + datetime.timedelta(minutes=15)
-    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
-    await manager.next()
-
-
-async def on_quick_time_30m(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    now = datetime.datetime.now()
-    quick_time = now + datetime.timedelta(minutes=30)
-    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
-    await manager.next()
-
-
-async def on_quick_time_1h(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    now = datetime.datetime.now()
-    quick_time = now + datetime.timedelta(hours=1)
-    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
-    await manager.next()
-
-
-async def on_quick_time_2h(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    now = datetime.datetime.now()
-    quick_time = now + datetime.timedelta(hours=2)
-    manager.dialog_data["start_time"] = quick_time.strftime("%H:%M")
-    await manager.next()
-
-
-async def on_time_to_schedule_end(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    uow: UnitOfWork = manager.middleware_data["uow"]
-    executor_id = manager.dialog_data["executor_id"]
-    selected_date = manager.dialog_data["selected_start_date"]
-    work_schedule = await uow.work_schedules.get_work_schedule_in_user_by_date(
-        executor_id, datetime.datetime.strptime(selected_date, "%Y-%m-%d").date()
-    )
-    if not work_schedule:
-        await call.answer("Робочий графік не знайдено.", show_alert=True)
-        return
-    manager.dialog_data["start_time"] = str(work_schedule.end_time)
-    await manager.next()
 
 
 async def on_delete_control_point(

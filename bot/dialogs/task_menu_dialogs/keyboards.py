@@ -96,7 +96,7 @@ def action_with_task_keyboard():
             I18nFormat("confirm-btn"),
             id="confirm_task",
             on_click=on_clicks.on_confirm_task_click,
-            when=F["task_status"].in_([TaskStatus.NEW]) & F["am_i_executor"],
+            when="show_accept_task_btn",
         ),
         Button(
             I18nFormat("complete-task-btn"),

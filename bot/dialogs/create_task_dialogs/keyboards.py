@@ -54,6 +54,7 @@ def select_executor_keyboard():
         id="select_executor_scroll",
         width=1,
         height=6,
+        hide_on_single_page=True,
     )
 
 
@@ -61,19 +62,19 @@ def report_media_checkbox():
     return Group(
         Checkbox(
             I18nFormat("need_photo_checkbox_btn"),
-            Format("dont_need_photo_checkbox_btn"),
+            I18nFormat("dont_need_photo_checkbox_btn"),
             id="report_with_photo_required",
             on_click=on_clicks.on_change_photo_required,
         ),
         Checkbox(
             I18nFormat("need_video_checkbox_btn"),
-            Format("dont_need_video_checkbox_btn"),
+            I18nFormat("dont_need_video_checkbox_btn"),
             id="report_with_video_required",
             on_click=on_clicks.on_change_video_required,
         ),
         Checkbox(
             I18nFormat("need_file_checkbox_btn"),
-            Format("dont_need_file_checkbox_btn"),
+            I18nFormat("dont_need_file_checkbox_btn"),
             id="report_with_file_required",
             on_click=on_clicks.on_change_file_required,
         ),
@@ -131,7 +132,7 @@ def quick_end_times_kb():
 def delete_control_points_kb():
     return ScrollingGroup(
         Select(
-            Format("{item}"),
+            Format("{item[1]}"),
             id="delete_control_point",
             items="control_points_list",
             item_id_getter=operator.itemgetter(0),

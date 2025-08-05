@@ -63,9 +63,11 @@ async def my_tasks_getter(
     if task_direction == "outcome":
         creator_id = event_from_user.id
         executor_id = None
+        date_find_to = None
     else:
         creator_id = None
         executor_id = event_from_user.id
+        date_find_to = datetime.datetime.now().date()
 
     if task_type in ["active", "new", "done"]:
         task_status_mapper = {
@@ -78,6 +80,7 @@ async def my_tasks_getter(
             executor_id=executor_id,
             creator_id=creator_id,
             status=task_status_mapper[task_type],
+            date_find_to=date_find_to,
         )
     elif task_type == "today":
         my_tasks = await uow.tasks.get_all_task_simple(
@@ -86,16 +89,18 @@ async def my_tasks_getter(
             start_datetime=datetime.datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0, tzinfo=KYIV
             ),
+            end_datetime=datetime.datetime.now().replace(
+                hour=23, minute=59, second=59, microsecond=999999, tzinfo=KYIV
+            ),
+            date_find_to=date_find_to,
         )
     elif task_type == "all":
         my_tasks = await uow.tasks.get_all_task_simple(
-            executor_id=executor_id,
-            creator_id=creator_id,
+            executor_id=executor_id, creator_id=creator_id, date_find_to=date_find_to
         )
     else:
         my_tasks = await uow.tasks.get_all_task_simple(
-            executor_id=executor_id,
-            creator_id=creator_id,
+            executor_id=executor_id, creator_id=creator_id, date_find_to=date_find_to
         )
     my_tasks = [TaskRead.model_validate(task) for task in my_tasks]
     task_status_mapper = {
@@ -105,7 +110,9 @@ async def my_tasks_getter(
         TaskStatus.CANCELED: i18n.get("task-status-canceled-emoji"),
         TaskStatus.OVERDUE: i18n.get("task-status-overdue-emoji"),
     }
+    user_level = await uow.users.get_user_hierarchy_level(event_from_user.id)
     return {
+        "show_ai": user_level <= 3,
         "task_list": [
             (
                 task.id,
@@ -118,6 +125,16 @@ async def my_tasks_getter(
             dialog_manager, uow, event_from_user, i18n, **kwargs
         ),
     }
+
+
+def show_task_accept_btn(task: TaskReadExtended, user_id: int) -> bool:
+    if task.status != TaskStatus.NEW:
+        return False
+    if task.executor_id != user_id:
+        return False
+    if task.start_datetime > datetime.datetime.now(KYIV):
+        return False
+    return True
 
 
 async def get_task(
@@ -222,6 +239,7 @@ async def get_task(
         ]
         if task.control_points
         else [],
+        "show_accept_task_btn": show_task_accept_btn(task, event_from_user.id),
     }
     return data
 

@@ -1,16 +1,13 @@
 import datetime
 from datetime import date, timedelta
 
-from aiogram import F
 from aiogram.types import InlineKeyboardButton
 from babel.dates import get_day_names, get_month_names
 
-from aiogram_dialog import ChatEvent, Dialog, DialogManager, Window
+from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import (
     Calendar,
     CalendarScope,
-    ManagedCalendar,
-    SwitchTo,
 )
 from aiogram_dialog.widgets.kbd.calendar_kbd import (
     DATE_TEXT,
@@ -19,18 +16,12 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarMonthView,
     CalendarScopeView,
     CalendarYearsView,
-    CallbackGenerator,
-    WEEK_DAY_TEXT,
-    DAYS_HEADER_TEXT,
-    ZOOM_OUT_TEXT,
-    NEXT_MONTH_TEXT,
-    PREV_MONTH_TEXT,
     CalendarConfig,
     next_month_begin,
     get_today,
     empty_button,
 )
-from aiogram_dialog.widgets.text import Const, Format, Text
+from aiogram_dialog.widgets.text import Format, Text
 
 
 SELECTED_DAYS_KEY = "selected_dates"
@@ -65,7 +56,7 @@ class MarkedDay(Text):
 class Month(Text):
     async def _render_text(self, data, manager: DialogManager) -> str:
         selected_date: date = data["date"]
-        locale = manager.event.from_user.language_code
+        locale = "uk"
         return get_month_names(
             "wide",
             context="stand-alone",
