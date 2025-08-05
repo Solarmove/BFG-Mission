@@ -67,33 +67,3 @@ async def on_analytics_click(
         "inline_message_id": call.inline_message_id,
     }
     await state.set_data({"prompt": "analytics_prompt", "call_data": call_data})
-
-
-async def on_start_create_task(
-    call: CallbackQuery,
-    widget: Button,
-    manager: DialogManager,
-):
-    await manager.done(show_mode=ShowMode.NO_UPDATE)
-    state: FSMContext = manager.middleware_data["state"]
-    i18n: I18nContext = manager.middleware_data["i18n"]
-    try:
-        await call.message.edit_text(
-            i18n.get("ai-agent-create-task-text"),
-            reply_markup=exit_ai_agent_kb().as_markup(),
-        )
-    except TelegramRetryAfter:
-        await call.message.edit_reply_markup(
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[]])
-        )
-        await call.message.answer(
-            i18n.get("ai-agent-create-task-text"),
-            reply_markup=exit_ai_agent_kb().as_markup(),
-        )
-
-    await state.set_state(AIAgentMenu.send_query)
-    call_data = {
-        "message_id": call.message.message_id,
-        "inline_message_id": call.inline_message_id,
-    }
-    await state.set_data({"prompt": "create_task_prompt", "call_data": call_data})

@@ -87,7 +87,6 @@ class WorkScheduleRead(BaseModel):
         return v
 
 
-
 class WorkScheduleUpdate(BaseModel):
     """Модель для оновлення робочого графіку користувача."""
 
@@ -106,7 +105,6 @@ class WorkScheduleUpdate(BaseModel):
             else:
                 v = v.astimezone(KYIV)  # приводим к Киеву, если было в другой зоне
         return v
-
 
 
 class WorkScheduleCreate(BaseModel):

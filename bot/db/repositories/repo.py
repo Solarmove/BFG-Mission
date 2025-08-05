@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_
 from sqlalchemy.orm import joinedload, selectinload
 
 from bot.db.models.models import (
@@ -25,6 +25,64 @@ from configreader import KYIV
 
 class UserRepo(SQLAlchemyRepository):
     model = User
+
+    async def get_users_without_me(self, my_user_id: int, my_hierarchy_level: int):
+        """Get users without the current user."""
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.id != my_user_id,
+                self.model.position.has(
+                    Positions.hierarchy_level.has(
+                        HierarchyLevel.level <= my_hierarchy_level
+                    )
+                ),
+            )
+            .options(joinedload(self.model.position))
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
+    async def get_users_for_create_single_task(
+        self,
+        my_user_id: int,
+        my_hierarchy_level: int,
+        start_datetime: datetime.datetime,
+        end_datetime: datetime.datetime,
+    ):
+        """Get users for creating a single task."""
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.id != my_user_id,
+                self.model.position.has(
+                    Positions.hierarchy_level.has(
+                        HierarchyLevel.level <= my_hierarchy_level
+                    )
+                ),
+                self.model.work_schedules.any(
+                    and_(
+                        WorkSchedule.date == start_datetime.date(),
+                        WorkSchedule.start_time <= start_datetime.time(),
+                        WorkSchedule.end_time >= start_datetime.time(),
+                    )
+                ),
+                self.model.work_schedules.any(
+                    and_(
+                        WorkSchedule.date == end_datetime.date(),
+                        WorkSchedule.start_time <= end_datetime.time(),
+                        WorkSchedule.end_time >= end_datetime.time(),
+                    )
+                ),
+            )
+            .options(
+                joinedload(self.model.position).options(
+                    joinedload(Positions.hierarchy_level)
+                )
+            )
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def get_all_users(self):
         stmt = select(self.model).options(
@@ -122,6 +180,48 @@ class UserRepo(SQLAlchemyRepository):
 
 class WorkScheduleRepo(SQLAlchemyRepository):
     model = WorkSchedule
+
+    async def get_work_schedule_in_user_by_date(
+        self,
+        user_id: int,
+        date: datetime.date,
+        start_time: datetime.time | None = None,
+        end_time: datetime.time | None = None,
+    ):
+        """Get work schedule for a user on a specific date."""
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.user_id == user_id,
+                self.model.date == date,
+            )
+            .order_by(self.model.start_time)
+        )
+        if start_time is not None:
+            stmt = stmt.where(self.model.start_time >= start_time)
+        if end_time is not None:
+            stmt = stmt.where(self.model.end_time <= end_time)
+        res = await self.session.execute(stmt)
+        return res.scalars().first()
+
+    async def get_all_work_schedule_in_user(
+        self,
+        user_id: int,
+        from_date: datetime.date | None = None,
+        to_date: datetime.date | None = None,
+    ):
+        """Get all work schedules for a user."""
+        stmt = (
+            select(self.model)
+            .where(self.model.user_id == user_id)
+            .order_by(self.model.date)
+        )
+        if from_date is not None:
+            stmt = stmt.where(self.model.date >= from_date)
+        if to_date is not None:
+            stmt = stmt.where(self.model.date <= to_date)
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def get_all_work_schedules_for_date_to_date(
         self,

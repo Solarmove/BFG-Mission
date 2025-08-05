@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from aiogram import Router, F, flags, Bot
 from aiogram.enums import ContentType, ParseMode
@@ -68,8 +69,11 @@ async def start_ai_agent(
     redis: Redis,
     channel_log: LogService,
 ):
+    if not message.from_user:
+        logger.warning("Message does not have a valid user.")
+        return
     state_data = await state.get_data()
-    call_data: dict = state_data.get("call_data")
+    call_data: dict | Any = state_data.get("call_data")
     prompt_arg = state_data["prompt"]
     if call_data and "message_id" in call_data:
         try:

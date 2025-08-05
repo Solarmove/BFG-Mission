@@ -170,11 +170,8 @@ class TaskTools(BaseTools):
         )
 
     async def create_one_task_func(self, new_task_data: TaskCreate):
-        new_task_data.start_datetime = new_task_data.start_datetime.replace(tzinfo=KYIV)
-        new_task_data.end_datetime = new_task_data.end_datetime.replace(tzinfo=KYIV)
         task_id = None
         creator_level = await self.get_user_hierarchy_level()
-
         async with self.uow:
             if new_task_data.creator_id != self.user_id:
                 return "Creator ID does not match the current user."
@@ -214,10 +211,11 @@ class TaskTools(BaseTools):
             task_id=task_id,
             _defer_until=new_task_data.start_datetime,
         )
-        await self.create_notification_new_task(
-            task_id=task_id,
-        )
+        # await self.create_notification_new_task(
+        #     task_id=task_id,
+        # )
         return task_id
+        # return task_id
 
     async def create_many_task_func(
         self,

@@ -46,7 +46,7 @@ async def send_notification(
     bot: Bot = ctx["bot"]
     uow = UnitOfWork()
     core = ctx["core"]
-    locale = 'uk'
+    locale = "uk"
     async with uow:
         task_model_dict = await uow.tasks.get_task_by_id(task_id, update_cache=True)
         if not task_model_dict:

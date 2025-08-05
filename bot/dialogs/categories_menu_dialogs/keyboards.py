@@ -49,9 +49,10 @@ def select_category_keyboard(on_select_category):
         Select(
             Format("{item[1]}"),
             id="select_category",
-            items="categories",
+            items="categories_list",
             item_id_getter=operator.itemgetter(0),
             on_click=on_select_category,
+            type_factory=int,
         ),
         id="select_category_scroll",
         hide_on_single_page=True,
