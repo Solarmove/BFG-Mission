@@ -303,6 +303,12 @@ show_parse_regular_tasks_result_window = Window(
         ),
         sep="\n",
     ),
+    Button(
+        I18nFormat("delete-create-task-btn"),
+        id="delete_create_task",
+        on_click=on_clicks.on_delete_create_task,
+        when=F["created_count"] > 0,
+    ),
     DynamicMedia(selector="csv_file", when=F["csv_file"]),
     MessageInput(
         func=on_clicks.on_recheck_csv_file_click, content_types=[ContentType.DOCUMENT]

@@ -48,7 +48,6 @@ async def create_notification_job(
             Якщо False, то створює нове сповіщення. Якщо сповіщення вже існує - нове сповіщення не буде створено.
     """
     log_service = LogService()
-
     datetime_now = datetime.datetime.now().replace(tzinfo=KYIV)
     if _defer_until:
         _defer_until = _defer_until.replace(tzinfo=KYIV)
@@ -76,21 +75,21 @@ async def create_notification_job(
         )
         return "Завдання не може бути створено, оскільки час відкладання не може бути від'ємним."
     job_id = f"notification_{notification_for}_{notification_subject}_{task_id}"
-    if update_notification:
-        existing_job = Job(job_id=job_id, redis=redis)
-        result = await existing_job.abort()
-        if not result:
-            logger.warning(
-                "Failed to update notification job, it may not exist or is already completed."
-            )
-            await log_service.warning(
-                "Failed to update notification job, it may not exist or is already completed.",
-                extra_info={"JOB_ID": job_id},
-            )
+    # if update_notification:
+    #     existing_job = Job(job_id=job_id, redis=redis)
+    #     result = await existing_job.abort()
+    #     if not result:
+    #         logger.warning(
+    #             "Failed to update notification job, it may not exist or is already completed."
+    #         )
+    #         await log_service.warning(
+    #             "Failed to update notification job, it may not exist or is already completed.",
+    #             extra_info={"JOB_ID": job_id},
+    #         )
     try:
         await arq.enqueue_job(
             "send_notification",
-            _job_id=job_id,
+            # _job_id=job_id,
             _defer_until=_defer_until if _defer_until else None,
             _defer_by=_defer_by,
             task_id=task_id,
@@ -112,3 +111,25 @@ async def create_notification_job(
             },
         )
         raise e
+
+
+async def abort_jobs(task_id: int):
+    """
+    Скасовує всі завдання, пов'язані з певним завданням.
+
+    Args:
+        task_id (int): ID завдання, для якого потрібно скасувати всі пов'язані завдання.
+        arq (ArqRedis): Підключення до Redis.
+    """
+    notification_subjects = [
+        "task_ending_soon",
+        "task_overdue",
+        "task_started",
+        "task_updated",
+        "task_created",
+    ]
+    for notification_for in ["creator", "executor"]:
+        for subject in notification_subjects:
+            job_id = f"notification_{notification_for}_{subject}_{task_id}"
+            job = Job(job_id=job_id, redis=redis)
+            await job.abort()

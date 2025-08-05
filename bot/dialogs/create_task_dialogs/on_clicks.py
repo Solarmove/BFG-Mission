@@ -7,7 +7,10 @@ from aiogram.exceptions import TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram_i18n import I18nContext
+from arq import ArqRedis
+from arq.jobs import Job
 
+from scheduler.jobs import abort_jobs
 from . import states, getters, on_clicks  # noqa: F401
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedCalendar, ManagedCheckbox  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
@@ -624,6 +627,7 @@ async def on_send_csv_file_click(
     if not message.document:
         await message.answer("Будь ласка, надішліть CSV файл.")
         return
+
     bot: Bot = manager.middleware_data["bot"]
     uow: UnitOfWork = manager.middleware_data["uow"]
     path_to_file = os.path.join(
@@ -635,6 +639,9 @@ async def on_send_csv_file_click(
     )
     try:
         result = await parse_regular_tasks_csv(path_to_file, uow)
+        create_notification_task_started
+        create_notification_task_is_overdue
+        create_notification_task_ending_soon
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
@@ -656,3 +663,24 @@ async def on_recheck_csv_file_click(
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
+
+
+async def on_delete_create_task(
+    call: CallbackQuery,
+    widget: Button,
+    manager: DialogManager,
+):
+    uow: UnitOfWork = manager.middleware_data["uow"]
+    arq: ArqRedis = manager.middleware_data["arq"]
+    parsing_csv_result = manager.dialog_data.get("parsing_csv_result", {})
+    created_tasks_ids = parsing_csv_result.get('created_tasks_ids', [])
+    try:
+        for created_task_id in created_tasks_ids:
+            await uow.tasks.delete_one(int(created_task_id))
+            # await abort_jobs(created_task_id)
+    except Exception as e:
+        await call.answer(f"Помилка при видаленні завдань: {e}", show_alert=True)
+        await uow.rollback()
+        return
+    await uow.commit()
+    await call.answer("Завдання видалено", show_alert=True)

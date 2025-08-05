@@ -9,6 +9,7 @@ from typing import Any, Dict, Sequence
 from bot.db.models.models import Task, TaskCategory, User, WorkSchedule
 from bot.entities.task import TaskCreate
 from bot.exceptions.user_exceptions import InvalidCSVFile
+from bot.services.ai_agent.tools import TaskTools
 from bot.utils.unitofwork import UnitOfWork
 from configreader import KYIV
 
@@ -83,7 +84,9 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
     return str(file_path.absolute())
 
 
-async def parse_regular_tasks_csv(file_path: str, uow: UnitOfWork) -> Dict[str, Any]:
+async def parse_regular_tasks_csv(
+    file_path: str, uow: UnitOfWork, task_tools: TaskTools
+) -> Dict[str, Any]:
     """
     Parse a CSV file with regular tasks and add them to the database.
     Creates an error report CSV file for problematic rows.
@@ -118,6 +121,7 @@ async def parse_regular_tasks_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         "tasks_created": 0,
         "errors": [],
         "error_report_path": None,
+        "created_tasks_ids": [],
     }
 
     # Dictionary to store problematic rows with their error messages
@@ -357,9 +361,22 @@ async def parse_regular_tasks_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                 end_datetime=task_create.end_datetime.replace(tzinfo=KYIV),
                 category_id=task_create.category_id,
             )
+            await task_tools.create_notification_task_started(
+                new_task.id,
+                _defer_until=task_create.start_datetime,
+            )
+            await task_tools.create_notification_task_is_overdue(
+                new_task.id,
+                _defer_until=task_create.end_datetime,
+            )
+            await task_tools.create_notification_task_ending_soon(
+                new_task.id,
+                _defer_until=task_create.end_datetime - datetime.timedelta(minutes=30),
+            )
 
             uow.session.add(new_task)
             stats["tasks_created"] += 1
+            stats["created_tasks_ids"].append(new_task.id)
 
         # Commit changes after processing each user
     await uow.commit()

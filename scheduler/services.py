@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Literal
 
@@ -9,6 +10,7 @@ from bot.entities.shared import TaskReadExtended
 from bot.keyboards.task import create_show_task_kb, create_end_task_kb
 from bot.services.mailing_service import send_message
 from bot.utils.enum import TaskStatus
+from configreader import KYIV
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,26 @@ async def send_task_ending_soon_notification(
         locale,
         task_title=task_model_extended.title,
     )
+    datetime_now = datetime.datetime.now(KYIV)
+    forecast_task_date = task_model_extended.end_datetime.replace(
+        tzinfo=KYIV
+    ) - datetime.timedelta(minutes=30)
+
+    if forecast_task_date.date() != datetime_now.date():
+        logger.info(
+            f"Task {task_model_extended.id} end time is in the past, skipping notification."
+        )
+        return
+    if forecast_task_date.time().hour != datetime_now.hour:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current hour, skipping notification."
+        )
+        return
+    if forecast_task_date.time().minute != datetime_now.minute:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current minute, skipping notification."
+        )
+        return
     await send_message(
         bot,
         task_model_extended.executor_id,
@@ -42,6 +64,25 @@ async def send_task_overdue_notification(
     core: FluentRuntimeCore,
     bot: Bot,
 ):
+    datetime_now = datetime.datetime.now(KYIV)
+    forecast_task_date = task_model_extended.end_datetime.replace(tzinfo=KYIV)
+
+    if forecast_task_date.date() != datetime_now.date():
+        logger.info(
+            f"Task {task_model_extended.id} end time is in the past, skipping notification."
+        )
+        return
+    if forecast_task_date.time().hour != datetime_now.hour:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current hour, skipping notification."
+        )
+        return
+    if forecast_task_date.time().minute != datetime_now.minute:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current minute, skipping notification."
+        )
+        return
+
     executor_full_name = "Без виконавця"
     if task_model_extended.executor:
         executor_full_name = (
@@ -92,6 +133,24 @@ async def send_task_started_notification(
     core: FluentRuntimeCore,
     bot: Bot,
 ):
+    datetime_now = datetime.datetime.now(KYIV)
+    forecast_job_date = task_model_extended.start_datetime.replace(tzinfo=KYIV)
+
+    if forecast_job_date.date() != datetime_now.date():
+        logger.info(
+            f"Task {task_model_extended.id} end time is in the past, skipping notification."
+        )
+        return
+    if forecast_job_date.time().hour != datetime_now.hour:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current hour, skipping notification."
+        )
+        return
+    if forecast_job_date.time().minute != datetime_now.minute:
+        logger.info(
+            f"Task {task_model_extended.id} end time is not in the current minute, skipping notification."
+        )
+        return
     if task_model_extended.status != TaskStatus.NEW:
         logger.info(f"Unnecessary notification for task {task_model_extended.id} ")
         return

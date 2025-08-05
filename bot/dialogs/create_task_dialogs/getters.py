@@ -291,4 +291,5 @@ async def get_pared_data(
         "errors": errors,
         "created_count": result.get("tasks_created"),
         "errors_count": len(errors),
+
     }
