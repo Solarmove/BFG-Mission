@@ -33,6 +33,9 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
         "Час початку (HH:MM)",
         "Час кінця (HH:MM)",
         "Категорія",
+        "Фото",
+        "Відео",
+        "Документ",
     ]
 
     # Create a string buffer for CSV data
@@ -57,7 +60,10 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
             "",  # Task description (empty)
             "",  # Start time (empty)
             "",  # End time (empty)
-            "",  # Category (empty)
+            "",  # Category (empty)\
+            "-",  # Photo (empty)
+            "-",  # Video (empty)
+            "-",  # Document (empty)
         ]
 
         # Write the row
@@ -142,7 +148,7 @@ async def parse_regular_tasks_csv(
     # Parse headers
     headers = rows[0]
     print(f"Parsed headers: {headers}")
-    if len(headers) < 7:  # All required columns
+    if len(headers) < 10:  # All required columns
         # raise InvalidCSVFile(
         #     "Заголовки написані не коректно. Перевірте формат файлу CSV."
         # )
@@ -154,7 +160,7 @@ async def parse_regular_tasks_csv(
                     "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
                 )
             headers = rows[0]
-            if len(headers) < 7:  # All required columns
+            if len(headers) < 10:  # All required columns
                 raise InvalidCSVFile(
                     "Заголовки написані не коректно. Перевірте формат файлу CSV."
                 )
@@ -197,6 +203,11 @@ async def parse_regular_tasks_csv(
             start_time_str = row[4].strip()
             end_time_str = row[5].strip()
             category_name = row[6].strip()
+            # Optional fields (photo, video, document) can be empty
+            photo = True if row[7].strip() == "+" else False
+            video = True if row[8].strip() == "+" else False
+            document = True if row[9].strip() == "+" else False
+
         except ValueError as e:
             error_msg = f"Помилка в рядку {row_index}: {e}"
             stats["errors"].append(error_msg)
@@ -279,7 +290,9 @@ async def parse_regular_tasks_csv(
         future_work_schedules: Sequence[
             WorkSchedule
         ] = await uow.work_schedules.get_all_work_schedule_in_user(
-            user_id=user.id, from_date=today
+            user_id=user.id,
+            from_date=today,
+            from_time=start_time,
         )
 
         if not future_work_schedules:
@@ -350,18 +363,13 @@ async def parse_regular_tasks_csv(
                 start_datetime=start_datetime,
                 end_datetime=end_datetime,
                 category_id=category_id,
+                photo_required=photo,
+                video_required=video,
+                file_required=document,
             )
 
             # Add task to database
-            new_task = dict(
-                creator_id=task_create.creator_id,
-                executor_id=task_create.executor_id,
-                title=task_create.title,
-                description=task_create.description,
-                start_datetime=task_create.start_datetime.replace(tzinfo=KYIV),
-                end_datetime=task_create.end_datetime.replace(tzinfo=KYIV),
-                category_id=task_create.category_id,
-            )
+            new_task = task_create.model_dump(exclude_unset=True)
             task_id = await uow.tasks.add_one(new_task)
             await task_tools.create_notification_task_started(
                 task_id,
