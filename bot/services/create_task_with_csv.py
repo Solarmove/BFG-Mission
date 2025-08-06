@@ -292,7 +292,6 @@ async def parse_regular_tasks_csv(
         ] = await uow.work_schedules.get_all_work_schedule_in_user(
             user_id=user.id,
             from_date=today,
-            from_time=start_time,
         )
 
         if not future_work_schedules:
