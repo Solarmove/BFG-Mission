@@ -636,11 +636,13 @@ async def on_send_csv_file_click(
         message.document.file_id,
         os.path.join("csv_files", f"regular_tasks_{message.from_user.id}.csv"),
     )
+    task_tools = TaskTools(
+        uow=uow,
+        arq=manager.middleware_data["arq"],
+        user_id=message.from_user.id,
+    )
     try:
-        result = await parse_regular_tasks_csv(path_to_file, uow)
-        create_notification_task_started
-        create_notification_task_is_overdue
-        create_notification_task_ending_soon
+        result = await parse_regular_tasks_csv(path_to_file, uow, task_tools)
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
