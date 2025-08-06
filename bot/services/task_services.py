@@ -244,5 +244,11 @@ def get_overdue_time(
 ) -> datetime.timedelta:
     """Повертає час прострочення завдання або контрольної точки"""
     if control_point_model:
-        return control_point_model.deadline - date_complete
-    return task_model.end_datetime - date_complete
+        time_diff = control_point_model.deadline - date_complete
+    else:
+        time_diff = task_model.end_datetime - date_complete
+
+    # Return absolute value for overdue tasks
+    if time_diff.total_seconds() < 0:
+        return abs(time_diff)
+    return time_diff
