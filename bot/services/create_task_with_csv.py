@@ -105,6 +105,7 @@ async def parse_regular_tasks_csv(
     Args:
         file_path: Path to the CSV file
         uow: UnitOfWork object for database operations
+        task_tools: TaskTools object for task-related operations
 
     Returns:
         Dict with statistics about the update:

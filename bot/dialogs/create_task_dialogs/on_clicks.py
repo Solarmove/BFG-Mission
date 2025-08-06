@@ -8,9 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram_i18n import I18nContext
 from arq import ArqRedis
-from arq.jobs import Job
 
-from scheduler.jobs import abort_jobs
 from . import states, getters, on_clicks  # noqa: F401
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedCalendar, ManagedCheckbox  # noqa: F401
 from aiogram_dialog.widgets.input import ManagedTextInput, MessageInput  # noqa: F401
@@ -19,6 +17,7 @@ from aiogram_dialog import DialogManager, ShowMode, ChatEvent  # noqa: F401
 from ...db.models.models import WorkSchedule
 from ...exceptions.user_exceptions import InvalidCSVFile
 from ...keyboards.ai import exit_ai_agent_kb
+from ...services.ai_agent.tools import TaskTools
 from ...services.create_task_with_csv import parse_regular_tasks_csv
 from ...states.ai import AIAgentMenu
 from ...utils.unitofwork import UnitOfWork
@@ -658,8 +657,13 @@ async def on_recheck_csv_file_click(
     path_to_file = os.path.join(
         "csv_files", f"regular_tasks_{message.from_user.id}.csv"
     )
+    task_tools = TaskTools(
+        uow=uow,
+        arq=manager.middleware_data["arq"],
+        user_id=message.from_user.id,
+    )
     try:
-        result = await parse_regular_tasks_csv(path_to_file, uow)
+        result = await parse_regular_tasks_csv(path_to_file, uow, task_tools)
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
@@ -673,7 +677,7 @@ async def on_delete_create_task(
     uow: UnitOfWork = manager.middleware_data["uow"]
     arq: ArqRedis = manager.middleware_data["arq"]
     parsing_csv_result = manager.dialog_data.get("parsing_csv_result", {})
-    created_tasks_ids = parsing_csv_result.get('created_tasks_ids', [])
+    created_tasks_ids = parsing_csv_result.get("created_tasks_ids", [])
     try:
         for created_task_id in created_tasks_ids:
             await uow.tasks.delete_one(int(created_task_id))
