@@ -68,7 +68,12 @@ async def my_tasks_getter(
         creator_id = None
         executor_id = event_from_user.id
         date_find_to = datetime.datetime.now().date()
-
+    task_find_filter = dict(
+        executor_id=executor_id,
+        creator_id=creator_id,
+        date_find_to=date_find_to,
+        without_task_status=[TaskStatus.CANCELED],
+    )
     if task_type in ["active", "new", "done"]:
         task_status_mapper = {
             "active": TaskStatus.IN_PROGRESS,
@@ -76,14 +81,15 @@ async def my_tasks_getter(
             "done": TaskStatus.COMPLETED,
         }
 
-        my_tasks = await uow.tasks.get_all_task_simple(
+        task_find_filter = dict(
             executor_id=executor_id,
             creator_id=creator_id,
             status=task_status_mapper[task_type],
             date_find_to=date_find_to,
+            without_task_status=[TaskStatus.CANCELED],
         )
     elif task_type == "today":
-        my_tasks = await uow.tasks.get_all_task_simple(
+        task_find_filter = dict(
             executor_id=executor_id,
             creator_id=creator_id,
             start_datetime=datetime.datetime.now().replace(
@@ -93,15 +99,18 @@ async def my_tasks_getter(
                 hour=23, minute=59, second=59, microsecond=999999, tzinfo=KYIV
             ),
             date_find_to=date_find_to,
+            without_task_status=[TaskStatus.CANCELED],
         )
+
     elif task_type == "all":
-        my_tasks = await uow.tasks.get_all_task_simple(
-            executor_id=executor_id, creator_id=creator_id, date_find_to=date_find_to
+        task_find_filter = dict(
+            executor_id=executor_id,
+            creator_id=creator_id,
+            date_find_to=date_find_to,
+            without_task_status=[TaskStatus.CANCELED],
         )
-    else:
-        my_tasks = await uow.tasks.get_all_task_simple(
-            executor_id=executor_id, creator_id=creator_id, date_find_to=date_find_to
-        )
+
+    my_tasks = await uow.tasks.get_all_task_simple(**task_find_filter)
     my_tasks = [TaskRead.model_validate(task) for task in my_tasks]
     task_status_mapper = {
         TaskStatus.IN_PROGRESS: i18n.get("task-status-in-progress-emoji"),

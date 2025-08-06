@@ -338,6 +338,7 @@ class TaskRepo(SQLAlchemyRepository):
         start_datetime: datetime.datetime | None = None,
         end_datetime: datetime.datetime | None = None,
         date_find_to: datetime.date | None = None,
+        without_task_status: list[TaskStatus] | None = None,
     ):
         """Get all tasks with optional filters."""
         stmt = select(self.model)
@@ -355,6 +356,8 @@ class TaskRepo(SQLAlchemyRepository):
             stmt = stmt.where(self.model.end_datetime <= end_datetime)
         if date_find_to is not None:
             stmt = stmt.where(func.date(self.model.start_datetime) <= date_find_to)
+        if without_task_status is not None:
+            stmt = stmt.where(self.model.status.not_in(without_task_status))
         stmt = stmt.order_by(self.model.created_at.desc())
         res = await self.session.execute(stmt)
         result = res.scalars().all()
