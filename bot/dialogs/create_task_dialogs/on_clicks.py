@@ -682,7 +682,9 @@ async def on_delete_create_task(
     created_tasks_ids = parsing_csv_result.get("created_tasks_ids", [])
     try:
         for created_task_id in created_tasks_ids:
-            await uow.tasks.delete_one(int(created_task_id))
+            if not created_task_id:
+                continue
+            await uow.tasks.delete_one(created_task_id)
             # await abort_jobs(created_task_id)
     except Exception as e:
         await call.answer(f"Помилка при видаленні завдань: {e}", show_alert=True)

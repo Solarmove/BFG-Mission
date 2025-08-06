@@ -6,7 +6,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Sequence
 
-from bot.db.models.models import Task, TaskCategory, User, WorkSchedule
+from bot.db.models.models import TaskCategory, User, WorkSchedule
 from bot.entities.task import TaskCreate
 from bot.exceptions.user_exceptions import InvalidCSVFile
 from bot.services.ai_agent.tools import TaskTools
@@ -353,7 +353,7 @@ async def parse_regular_tasks_csv(
             )
 
             # Add task to database
-            new_task = Task(
+            new_task = dict(
                 creator_id=task_create.creator_id,
                 executor_id=task_create.executor_id,
                 title=task_create.title,
@@ -362,22 +362,22 @@ async def parse_regular_tasks_csv(
                 end_datetime=task_create.end_datetime.replace(tzinfo=KYIV),
                 category_id=task_create.category_id,
             )
+            task_id = await uow.tasks.add_one(new_task)
             await task_tools.create_notification_task_started(
-                new_task.id,
+                task_id,
                 _defer_until=task_create.start_datetime,
             )
             await task_tools.create_notification_task_is_overdue(
-                new_task.id,
+                task_id,
                 _defer_until=task_create.end_datetime,
             )
             await task_tools.create_notification_task_ending_soon(
-                new_task.id,
+                task_id,
                 _defer_until=task_create.end_datetime - datetime.timedelta(minutes=30),
             )
 
-            uow.session.add(new_task)
             stats["tasks_created"] += 1
-            stats["created_tasks_ids"].append(new_task.id)
+            stats["created_tasks_ids"].append(task_id)
 
         # Commit changes after processing each user
     await uow.commit()

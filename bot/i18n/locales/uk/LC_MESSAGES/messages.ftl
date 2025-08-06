@@ -682,4 +682,4 @@ parse-regular-tasks-result-text = <b>Результати створення р�
 
     <blockquote><b>Створено:</b> {$created_count} завдань
     <b>Помилки:</b> {$errors_count} шт.</blockquote>
-
+delete-create-task-btn = ❌ Видалити створені завдання
