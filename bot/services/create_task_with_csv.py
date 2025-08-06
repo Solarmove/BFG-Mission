@@ -343,7 +343,7 @@ async def parse_regular_tasks_csv(
 
             # Create new task
             task_create = TaskCreate(
-                creator_id=user.id,  # User creates their own regular task
+                creator_id=task_tools.user_id,  # User creates their own regular task
                 executor_id=user.id,
                 title=task_name,
                 description=task_description,
