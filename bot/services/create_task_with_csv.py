@@ -28,6 +28,7 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
     headers = [
         "Telegram ID",
         "Ім'я + Посада",
+        "Дата завдання",
         "Назва завдання",
         "Опис завдання",
         "Час початку (HH:MM)",
@@ -56,6 +57,9 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
         row_data = [
             user.id,
             user_info,
+            (datetime.datetime.now(KYIV) + datetime.timedelta(days=1)).strftime(
+                "%Y-%m-%d"
+            ),
             "",  # Task name (empty)
             "",  # Task description (empty)
             "",  # Start time (empty)
@@ -148,7 +152,7 @@ async def parse_regular_tasks_csv(
     # Parse headers
     headers = rows[0]
     print(f"Parsed headers: {headers}")
-    if len(headers) < 10:  # All required columns
+    if len(headers) < 11:  # All required columns
         # raise InvalidCSVFile(
         #     "Заголовки написані не коректно. Перевірте формат файлу CSV."
         # )
@@ -160,16 +164,16 @@ async def parse_regular_tasks_csv(
                     "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
                 )
             headers = rows[0]
-            if len(headers) < 10:  # All required columns
+            if len(headers) < 11:  # All required columns
                 raise InvalidCSVFile(
                     "Заголовки написані не коректно. Перевірте формат файлу CSV."
                 )
-    print(f"Parsed headers: {headers}")
 
     # Validate required headers
     expected_headers = [
         "Telegram ID",
         "Ім'я + Посада",
+        "Дата завдання",
         "Назва завдання",
         "Опис завдання",
         "Час початку (HH:MM)",
@@ -198,6 +202,7 @@ async def parse_regular_tasks_csv(
         # Extract data from row
         try:
             telegram_id = int(row[0])
+            task_date_str = row[1].strip()
             task_name = row[2].strip()
             task_description = row[3].strip()
             start_time_str = row[4].strip()
@@ -210,6 +215,13 @@ async def parse_regular_tasks_csv(
 
         except ValueError as e:
             error_msg = f"Помилка в рядку {row_index}: {e}"
+            stats["errors"].append(error_msg)
+            if row_index not in problematic_rows:
+                problematic_rows[row_index] = {"row": row, "errors": []}
+            problematic_rows[row_index]["errors"].append(error_msg)
+            continue
+        if not task_date_str:
+            error_msg = f"Рядок {row_index}: Дата завдання не може бути порожньою"
             stats["errors"].append(error_msg)
             if row_index not in problematic_rows:
                 problematic_rows[row_index] = {"row": row, "errors": []}
@@ -234,6 +246,22 @@ async def parse_regular_tasks_csv(
             continue
 
         # Parse time values
+        try:
+            task_date = datetime.datetime.strptime(task_date_str, "%Y-%m-%d").date()
+            if task_date < datetime.date.today():
+                error_msg = f"Рядок {row_index}: Дата завдання ({task_date_str}) не може бути в минулому"
+                stats["errors"].append(error_msg)
+                if row_index not in problematic_rows:
+                    problematic_rows[row_index] = {"row": row, "errors": []}
+                problematic_rows[row_index]["errors"].append(error_msg)
+                continue
+        except ValueError:
+            error_msg = f"Рядок {row_index}: Неправильний формат дати. Використовуйте формат YYYY-MM-DD"
+            stats["errors"].append(error_msg)
+            if row_index not in problematic_rows:
+                problematic_rows[row_index] = {"row": row, "errors": []}
+            problematic_rows[row_index]["errors"].append(error_msg)
+            continue
         try:
             start_time = (
                 datetime.datetime.strptime(start_time_str, "%H:%M")
@@ -286,12 +314,12 @@ async def parse_regular_tasks_csv(
                 category_id = category.id
 
         # Get all work schedules for the user in the future
-        today = datetime.datetime.now(KYIV).date()
         future_work_schedules: Sequence[
             WorkSchedule
         ] = await uow.work_schedules.get_all_work_schedule_in_user(
             user_id=user.id,
-            from_date=today,
+            from_date=task_date,
+            to_date=task_date,
         )
 
         if not future_work_schedules:
