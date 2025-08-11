@@ -202,16 +202,16 @@ async def parse_regular_tasks_csv(
         # Extract data from row
         try:
             telegram_id = int(row[0])
-            task_date_str = row[1].strip()
-            task_name = row[2].strip()
-            task_description = row[3].strip()
-            start_time_str = row[4].strip()
-            end_time_str = row[5].strip()
-            category_name = row[6].strip()
+            task_date_str = row[2].strip()
+            task_name = row[3].strip()
+            task_description = row[4].strip()
+            start_time_str = row[5].strip()
+            end_time_str = row[6].strip()
+            category_name = row[7].strip()
             # Optional fields (photo, video, document) can be empty
-            photo = True if row[7].strip() == "+" else False
-            video = True if row[8].strip() == "+" else False
-            document = True if row[9].strip() == "+" else False
+            photo = True if row[8].strip() == "+" else False
+            video = True if row[9].strip() == "+" else False
+            document = True if row[10].strip() == "+" else False
 
         except ValueError as e:
             error_msg = f"Помилка в рядку {row_index}: {e}"
