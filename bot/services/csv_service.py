@@ -127,9 +127,21 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
     }
 
     # Read the CSV file
-    with open(file_path, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f, delimiter=";")
-        rows = list(reader)
+    try:
+        with open(file_path, "r", encoding="utf-8-sig") as f:
+            reader = csv.reader(f, delimiter=";")
+            rows = list(reader)
+    except UnicodeDecodeError as e:
+        logging.info(f"UnicodeDecodeError: {e}. Trying cp1251 encoding.")
+        try:
+            with open(file_path, "r", encoding="cp1251") as f:
+                reader = csv.reader(f, delimiter=";")
+                rows = list(reader)
+        except Exception as e:
+            logging.error(f"Error reading CSV file with cp1251 encoding: {e}")
+            raise InvalidCSVFile(
+                "Не вдалося прочитати файл CSV. Переконайтеся, що файл у форматі CSV."
+            )
 
     if len(rows) < 2:  # At least headers and one data row
         raise InvalidCSVFile(
