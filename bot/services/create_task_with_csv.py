@@ -643,7 +643,7 @@ async def _create_regular_task(
         category_id=category_id,
         task_month=task_month,
         start_time=start_time.replace(tzinfo=KYIV),
-        end_datetime=end_time.replace(tzinfo=KYIV),
+        end_time=end_time.replace(tzinfo=KYIV),
     )
     if existing_regular:
         error_msg = (
