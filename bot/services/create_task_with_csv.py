@@ -193,10 +193,42 @@ async def parse_tasks_csv(
     # Key: row index, Value: list of error messages
     problematic_rows = {}
 
-    # Read the CSV file
-    with open(file_path, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f, delimiter=";")
-        rows = list(reader)
+    # Read the CSV file with robust encoding and delimiter handling
+    rows: List[List[str]] | None = None
+    chosen_encoding: Optional[str] = None
+    chosen_delimiter: Optional[str] = None
+
+    encodings_to_try = [
+        "utf-8-sig",
+        "utf-8",
+        "cp1251",
+        "windows-1251",
+        "cp1252",
+        "latin1",
+    ]
+    delimiters_to_try = [";", ","]
+
+    for enc in encodings_to_try:
+        for delim in delimiters_to_try:
+            try:
+                with open(file_path, "r", encoding=enc, newline="") as f:
+                    reader = csv.reader(f, delimiter=delim)
+                    trial_rows = list(reader)
+                    if trial_rows:  # At least headers exist
+                        rows = trial_rows
+                        chosen_encoding = enc
+                        chosen_delimiter = delim
+                        break
+            except UnicodeDecodeError:
+                # Try next encoding
+                continue
+        if rows is not None:
+            break
+
+    if rows is None:
+        raise InvalidCSVFile(
+            "Не вдалося прочитати CSV файл. Будь ласка, переконайтесь, що файл збережено в UTF-8 або Windows-1251."
+        )
 
     if len(rows) < 2:  # At least headers and one data row
         raise InvalidCSVFile(
@@ -206,23 +238,11 @@ async def parse_tasks_csv(
     # Parse headers
     headers = rows[0]
     headers_count_required = 11
-    print(f"Parsed headers: {headers}")
+    print(f"Parsed headers (encoding={chosen_encoding}, delimiter='{chosen_delimiter}'): {headers}")
     if len(headers) < headers_count_required:  # All required columns
-        # raise InvalidCSVFile(
-        #     "Заголовки написані не коректно. Перевірте формат файлу CSV."
-        # )
-        with open(file_path, "r", encoding="utf-8-sig") as f:
-            reader = csv.reader(f, delimiter=",")
-            rows = list(reader)
-            if len(rows) < 2:  # At least headers and one data row
-                raise InvalidCSVFile(
-                    "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
-                )
-            headers = rows[0]
-            if len(headers) < 11:  # All required columns
-                raise InvalidCSVFile(
-                    "Заголовки написані не коректно. Перевірте формат файлу CSV."
-                )
+        raise InvalidCSVFile(
+            "Заголовки написані не коректно. Перевірте формат файлу CSV."
+        )
 
     # Validate required headers
     expected_headers = SIMPLE_TASK_HEADERS if not is_regular else REGULAR_TASK_HEADERS
