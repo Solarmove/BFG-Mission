@@ -248,7 +248,7 @@ class RegularTask(Base):
     task_month = mapped_column(INTEGER, nullable=False)
     task_year = mapped_column(INTEGER, nullable=False)
     start_time = mapped_column(TIME(timezone=True), nullable=False)
-    end_datetime = mapped_column(TIME(timezone=True), nullable=False)
+    end_time = mapped_column(TIME(timezone=True), nullable=False)
     photo_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
     video_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
     file_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
