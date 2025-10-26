@@ -664,7 +664,7 @@ async def _create_regular_task(
         "description": task_description,
         "task_month": task_month,
         "start_time": start_time,
-        "end_datetime": end_time,
+        "end_time": end_time,
         "category_id": category_id,
         "photo_required": photo,
         "video_required": video,
