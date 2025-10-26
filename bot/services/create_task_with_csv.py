@@ -238,11 +238,14 @@ async def parse_tasks_csv(
 
     # Parse headers
     headers = rows[0]
-    headers_count_required = 11
-    print(
+    headers_count_required = 11 if not is_regular else 12
+    logging.info(
         f"Parsed headers (encoding={chosen_encoding}, delimiter='{chosen_delimiter}'): {headers}"
     )
     if len(headers) < headers_count_required:  # All required columns
+        logging.info(
+            f"Headers count ({len(headers)}) is less than required ({headers_count_required}). Skipping rows with missing headers."
+        )
         raise InvalidCSVFile(
             "Заголовки написані не коректно. Перевірте формат файлу CSV."
         )
@@ -251,7 +254,7 @@ async def parse_tasks_csv(
     expected_headers = SIMPLE_TASK_HEADERS if not is_regular else REGULAR_TASK_HEADERS
 
     for i, header in enumerate(expected_headers):
-        if headers[i] != header:
+        if expected_headers[i] != header:
             raise InvalidCSVFile(
                 f"Заголовок '{header}' не знайдено або розміщений не правильно. Перевірте формат файлу CSV."
             )
@@ -269,6 +272,7 @@ async def parse_tasks_csv(
             continue
         month_str = None
         task_date_str = None
+        year_str = None
         # Extract data from row
         try:
             telegram_id = int(row[0])
@@ -276,15 +280,24 @@ async def parse_tasks_csv(
             task_description = row[3].strip()
             if is_regular:
                 month_str = row[4].strip()
+                year_str = row[5].strip()
+                start_time_str = row[6].strip()
+                end_time_str = row[7].strip()
+                category_name = row[8].strip()
+                # Optional fields (photo, video, document) can be empty
+                photo = True if row[9].strip() == "+" else False
+                video = True if row[10].strip() == "+" else False
+                document = True if row[11].strip() == "+" else False
+
             else:
                 task_date_str = row[4].strip()
-            start_time_str = row[5].strip()
-            end_time_str = row[6].strip()
-            category_name = row[7].strip()
-            # Optional fields (photo, video, document) can be empty
-            photo = True if row[8].strip() == "+" else False
-            video = True if row[9].strip() == "+" else False
-            document = True if row[10].strip() == "+" else False
+                start_time_str = row[5].strip()
+                end_time_str = row[6].strip()
+                category_name = row[7].strip()
+                # Optional fields (photo, video, document) can be empty
+                photo = True if row[8].strip() == "+" else False
+                video = True if row[9].strip() == "+" else False
+                document = True if row[10].strip() == "+" else False
 
         except ValueError as e:
             error_msg = f"Помилка в рядку {row_index}: {e}"
@@ -300,6 +313,11 @@ async def parse_tasks_csv(
                 problematic_rows[row_index] = {"row": row, "errors": []}
             problematic_rows[row_index]["errors"].append(error_msg)
             continue
+        if is_regular and not year_str:
+            error_msg = f"Рядок {row_index}: Рік не може бути порожнім"
+            stats["errors"].append(error_msg)
+            if row_index not in problematic_rows:
+                problematic_rows[row_index] = {"row": row, "errors": []}
         if is_regular and not month_str:
             error_msg = f"Рядок {row_index}: Місяць не може бути порожнім"
             stats["errors"].append(error_msg)
