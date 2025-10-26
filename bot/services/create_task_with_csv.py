@@ -149,7 +149,7 @@ def create_csv_tasks_template(users: Sequence[User], is_regular: bool) -> str:
 
 
 async def parse_tasks_csv(
-    file_path: str, uow: UnitOfWork, task_tools: TaskTools, is_regular: bool = True
+    file_path: str, uow: UnitOfWork, task_tools: TaskTools, is_regular: bool
 ) -> Dict[str, Any]:
     """
     Parse a CSV file with regular tasks and add them to the database.
@@ -170,6 +170,7 @@ async def parse_tasks_csv(
         file_path: Path to the CSV file
         uow: UnitOfWork object for database operations
         task_tools: TaskTools object for task-related operations
+        is_regular: Whether the CSV file is for regular tasks or for other tasks (e.g., for reminders)
 
     Returns:
         Dict with statistics about the update:
@@ -238,7 +239,9 @@ async def parse_tasks_csv(
     # Parse headers
     headers = rows[0]
     headers_count_required = 11
-    print(f"Parsed headers (encoding={chosen_encoding}, delimiter='{chosen_delimiter}'): {headers}")
+    print(
+        f"Parsed headers (encoding={chosen_encoding}, delimiter='{chosen_delimiter}'): {headers}"
+    )
     if len(headers) < headers_count_required:  # All required columns
         raise InvalidCSVFile(
             "Заголовки написані не коректно. Перевірте формат файлу CSV."

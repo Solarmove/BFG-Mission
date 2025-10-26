@@ -626,7 +626,7 @@ async def on_send_csv_file_click(
     if not message.document:
         await message.answer("Будь ласка, надішліть CSV файл.")
         return
-
+    start_data = manager.start_data or {}
     bot: Bot = manager.middleware_data["bot"]
     uow: UnitOfWork = manager.middleware_data["uow"]
     path_to_file = os.path.join(
@@ -642,7 +642,12 @@ async def on_send_csv_file_click(
         user_id=message.from_user.id,
     )
     try:
-        result = await parse_tasks_csv(path_to_file, uow, task_tools)
+        result = await parse_tasks_csv(
+            path_to_file,
+            uow,
+            task_tools,
+            is_regular=start_data.get("is_regular", False),
+        )
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
@@ -655,6 +660,7 @@ async def on_recheck_csv_file_click(
     widget: MessageInput,
     manager: DialogManager,
 ):
+    start_data = manager.start_data or {}
     uow: UnitOfWork = manager.middleware_data["uow"]
     path_to_file = os.path.join(
         "csv_files", f"regular_tasks_{message.from_user.id}.csv"
@@ -664,8 +670,9 @@ async def on_recheck_csv_file_click(
         arq=manager.middleware_data["arq"],
         user_id=message.from_user.id,
     )
+    is_regular = start_data.get("is_regular")
     try:
-        result = await parse_tasks_csv(path_to_file, uow, task_tools)
+        result = await parse_tasks_csv(path_to_file, uow, task_tools, is_regular)
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
