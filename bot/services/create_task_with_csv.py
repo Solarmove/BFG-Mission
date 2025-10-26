@@ -6,6 +6,7 @@ import os
 from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Sequence, List, Optional
+from zoneinfo import ZoneInfo
 
 from bot.db.models.models import User, WorkSchedule
 from bot.entities.task import TaskCreate
@@ -613,17 +614,17 @@ async def parse_tasks_csv(
 
 
 def timetz_with_fixed_offset(
-    local_t: dt.time, year: int, month: int, tz_key="Europe/Kyiv"
-) -> dt.time:
+    local_t: datetime.time, year: int, month: int, tz_key="Europe/Kyiv"
+) -> datetime.time:
     # «Приклеиваем» дату, чтобы учесть DST и получить смещение
-    probe = dt.datetime(
+    probe = datetime.datetime(
         year, month, 1, local_t.hour, local_t.minute, tzinfo=ZoneInfo(tz_key)
     )
     offset = probe.utcoffset()
     if offset is None:
         # на всякий случай, но для ZoneInfo с датой offset будет не None
         raise ValueError("Cannot compute timezone offset")
-    return local_t.replace(tzinfo=dt.timezone(offset))
+    return local_t.replace(tzinfo=datetime.timezone(offset))
 
 
 async def _create_regular_task(
