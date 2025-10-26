@@ -34,6 +34,7 @@ REGULAR_TASK_HEADERS = [
     "Назва завдання",
     "Опис завдання",
     "Номер Місяця завдання",
+    "Рік завдання",
     "Час початку (HH:MM)",
     "Час кінця (HH:MM)",
     "Категорія",
@@ -64,15 +65,14 @@ def get_row_data(user_id: int, full_name_and_position: str, is_regular: bool) ->
     else:
         task_month = datetime.datetime.now(KYIV).month
         current_day = datetime.datetime.now(KYIV).day
-        max_days_in_month = calendar.monthrange(
-            datetime.datetime.now(KYIV).year, task_month
-        )[-1]
+        task_year = datetime.datetime.now(KYIV).year
+        max_days_in_month = calendar.monthrange(task_year, task_month)[-1]
         if current_day == max_days_in_month:
-            next_month = task_month + 1
-            next_year = datetime.datetime.now(KYIV).year
-            if next_month > 12:
+            task_month = task_month + 1
+            next_year = datetime.datetime.now(KYIV).year + 1
+            if task_month > 12:
                 task_month = 1
-                next_year += 1
+                task_year = next_year
 
         regular_task_row_data = [
             user_id,
@@ -80,6 +80,7 @@ def get_row_data(user_id: int, full_name_and_position: str, is_regular: bool) ->
             "",  # Task name (empty)
             "",  # Task description (empty)
             task_month,  # Month
+            task_year,
             "",  # Start time (empty)
             "",  # End time (empty)
             "",  # Category (empty)\
@@ -624,4 +625,3 @@ async def _create_regular_task(
     regular_task_id = await uow.regular_tasks.add_one(regular_task_data)
     stats["tasks_created"] += 1
     stats["created_tasks_ids"].append(regular_task_id)
-

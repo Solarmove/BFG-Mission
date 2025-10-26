@@ -3,10 +3,11 @@ import logging
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram_i18n.cores import FluentRuntimeCore
+from arq import cron
 
 from bot.utils.unitofwork import UnitOfWork
 from configreader import config, RedisConfig
-from scheduler.func import send_notification
+from scheduler.func import send_notification, create_task_from_regular
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,6 +40,13 @@ class WorkerSettings:
     redis_settings = RedisConfig.pool_settings
     on_startup = startup
     on_shutdown = shutdown
-    functions = [send_notification]
-
+    functions = [send_notification, create_task_from_regular]
+    cron_jobs = [
+        cron(
+            "scheduler.func.create_task_from_regular",
+            hour=0,
+            minute=0,
+            run_at_startup=True,
+        )
+    ]
     allow_abort_jobs = True

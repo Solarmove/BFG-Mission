@@ -1,9 +1,11 @@
+import datetime
 import logging
 
 from aiogram import Bot
 
-from bot.db.redis import get_user_locale
+from bot.db.models.models import Task
 from bot.entities.shared import TaskReadExtended
+from bot.services.ai_agent.tools import TaskTools
 from bot.utils.enum import TaskStatus
 from bot.utils.unitofwork import UnitOfWork
 from scheduler.jobs import NOTIFICATION_FOR, NOTIFICATION_SUBJECTS
@@ -92,4 +94,70 @@ async def send_notification(
                 task_model_extended=task_model_extended,
                 core=core,
                 bot=bot,
+            )
+
+
+async def create_task_from_regular(ctx):
+    uow = UnitOfWork()
+
+    async with uow:
+        month = datetime.datetime.now().month
+        year = datetime.datetime.now().year
+        all_regulars_tasks = await uow.regular_tasks.get_all_regular_tasks(
+            month=month, year=year
+        )
+        now = datetime.datetime.now()
+        for task in all_regulars_tasks:
+            task_start_date = datetime.datetime.combine(
+                now.date(), task.start_datetime.time()
+            )
+            task_end_date = datetime.datetime.combine(
+                now.date(), task.end_datetime.time()
+            )
+            is_user_work = await uow.work_schedules.is_user_work_in_this_time(
+                user_id=task.executor_id,
+                date=task_start_date.date(),
+                time_from=task_start_date.time(),
+                time_to=task_end_date.time(),
+            )
+            if not is_user_work:
+                continue
+            task_start_date = datetime.datetime.combine(
+                task_start_date.date(), task_start_date.time()
+            )
+            task_end_date = datetime.datetime.combine(
+                task_end_date.date(), task_end_date.time()
+            )
+            task_create = Task(
+                creator_id=task.creator_id,  # User creates their own regular task
+                executor_id=task.executor_id,
+                title=task.title,
+                description=task.description,
+                start_datetime=task_start_date,
+                end_datetime=task_end_date,
+                category_id=task.category_id,
+                photo_required=task.photo,
+                video_required=task.video,
+                file_required=task.document,
+            )
+
+            # Add task to database
+            task_tools = TaskTools(
+                uow=uow,
+                arq=ctx["redis"],
+                user_id=task.executor_id,
+            )
+            task_id = await uow.tasks.session.add(task_create)
+            await uow.session.flush()
+            await task_tools.create_notification_task_started(
+                task_id,
+                _defer_until=task_create.start_datetime,
+            )
+            await task_tools.create_notification_task_is_overdue(
+                task_id,
+                _defer_until=task_create.end_datetime,
+            )
+            await task_tools.create_notification_task_ending_soon(
+                task_id,
+                _defer_until=task_create.end_datetime - datetime.timedelta(minutes=30),
             )

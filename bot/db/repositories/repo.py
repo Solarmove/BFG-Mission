@@ -212,6 +212,27 @@ class WorkScheduleRepo(SQLAlchemyRepository):
         res = await self.session.execute(stmt)
         return res.scalars().first()
 
+    async def is_user_work_in_this_time(
+        self,
+        user_id: int,
+        date: datetime.date,
+        time_from: datetime.time,
+        time_to: datetime.time,
+    ):
+        """Check if a user is working in this time."""
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.user_id == user_id,
+                self.model.date == date,
+                self.model.start_time <= time_from,
+                self.model.end_time >= time_to,
+            )
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none() is not None
+
     async def get_all_work_schedule_in_user(
         self,
         user_id: int,
@@ -487,5 +508,22 @@ class AnalyticsRepo(SQLAlchemyRepository):
             for task in result
         ]
 
+
 class RegularTaskRepo(SQLAlchemyRepository):
     model = RegularTask
+
+    async def is_report_exists_in_reg_task(self, regular_task_id: int):
+        stmt = select(TaskReport.id).where(
+            TaskReport.regular_task_id == regular_task_id
+        )
+        res = await self.session.execute(stmt)
+        result = res.scalars().first
+        return bool(result)
+
+    async def get_all_regular_tasks(self, month: int, year: int):
+        stmt = select(self.model).where(
+            self.model.task_month == month, self.model.task_year == year
+        )
+        res = await self.session.execute(stmt)
+        result = res.scalars().all()
+        return result

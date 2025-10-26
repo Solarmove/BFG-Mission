@@ -36,7 +36,7 @@ class TaskRead(BaseModel):
     """Опис завдання. Може бути None, якщо опис не потрібен."""
     start_datetime: datetime.datetime
     """Дата та час початку завдання."""
-    end_datetime: datetime.datetime
+    end_datetime: datetime.datetime | None
     """Дата та час завершення завдання."""
     category_id: int | None = None
     """ID категорії завдання. Може бути None, якщо категорія була видалена."""

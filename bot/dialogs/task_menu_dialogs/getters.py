@@ -74,6 +74,11 @@ async def my_tasks_getter(
         date_find_to=date_find_to,
         without_task_status=[TaskStatus.CANCELED],
     )
+    regular_task_filter = dict(
+        month=datetime.datetime.now().month,
+        executor_id=executor_id,
+        creator_id=creator_id,
+    )
     if task_type in ["active", "new", "done"]:
         task_status_mapper = {
             "active": TaskStatus.IN_PROGRESS,
@@ -81,36 +86,25 @@ async def my_tasks_getter(
             "done": TaskStatus.COMPLETED,
         }
 
-        task_find_filter = dict(
-            executor_id=executor_id,
-            creator_id=creator_id,
+        task_find_filter.update(
             status=task_status_mapper[task_type],
-            date_find_to=date_find_to,
-            without_task_status=[TaskStatus.CANCELED],
         )
+        if task_type in ["active", "new"]:
+            regular_task_filter.update(status="active")
+        elif task_type == "done":
+            regular_task_filter.update(status="done")
+
     elif task_type == "today":
-        task_find_filter = dict(
-            executor_id=executor_id,
-            creator_id=creator_id,
+        task_find_filter.update(
             start_datetime=datetime.datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0, tzinfo=KYIV
             ),
             end_datetime=datetime.datetime.now().replace(
                 hour=23, minute=59, second=59, microsecond=999999, tzinfo=KYIV
             ),
-            date_find_to=date_find_to,
-            without_task_status=[TaskStatus.CANCELED],
         )
-
-    elif task_type == "all":
-        task_find_filter = dict(
-            executor_id=executor_id,
-            creator_id=creator_id,
-            date_find_to=date_find_to,
-            without_task_status=[TaskStatus.CANCELED],
-        )
-
     my_tasks = await uow.tasks.get_all_task_simple(**task_find_filter)
+
     my_tasks = [TaskRead.model_validate(task) for task in my_tasks]
     task_status_mapper = {
         TaskStatus.IN_PROGRESS: i18n.get("task-status-in-progress-emoji"),

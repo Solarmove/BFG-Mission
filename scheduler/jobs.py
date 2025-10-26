@@ -133,3 +133,5 @@ async def abort_jobs(task_id: int):
             job_id = f"notification_{notification_for}_{subject}_{task_id}"
             job = Job(job_id=job_id, redis=redis)
             await job.abort()
+
+

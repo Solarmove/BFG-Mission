@@ -246,6 +246,7 @@ class RegularTask(Base):
     title: Mapped[str] = mapped_column(VARCHAR(255), nullable=False)
     description: Mapped[str | None] = mapped_column(TEXT, nullable=True)
     task_month = mapped_column(INTEGER, nullable=False)
+    task_year = mapped_column(INTEGER, nullable=False)
     start_time = mapped_column(TIME(timezone=True), nullable=False)
     end_datetime = mapped_column(TIME(timezone=True), nullable=False)
     photo_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
