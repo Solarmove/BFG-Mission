@@ -636,25 +636,25 @@ async def _create_regular_task(
     This writes results directly into stats and problematic_rows to minimize changes in the caller.
     """
     # Check duplicate regular task
-    existing_regular = await uow.regular_tasks.find_one(
-        executor_id=user.id,
-        title=task_name,
-        description=task_description,
-        category_id=category_id,
-        task_month=task_month,
-        start_time=start_time.replace(tzinfo=KYIV),
-        end_time=end_time.replace(tzinfo=KYIV),
-    )
-    if existing_regular:
-        error_msg = (
-            f"Рядок {row_index}: Регулярне завдання вже існує для користувача {user.full_name} "
-            f"на місяць {task_month} з часом початку {start_time_str} та кінця {end_time_str}"
-        )
-        stats["errors"].append(error_msg)
-        if row_index not in problematic_rows:
-            problematic_rows[row_index] = {"row": row, "errors": []}
-        problematic_rows[row_index]["errors"].append(error_msg)
-        return
+    # existing_regular = await uow.regular_tasks.find_one(
+    #     executor_id=user.id,
+    #     title=task_name,
+    #     description=task_description,
+    #     category_id=category_id,
+    #     task_month=task_month,
+    #     start_time=start_time.replace(tzinfo=KYIV),
+    #     end_time=end_time.replace(tzinfo=KYIV),
+    # )
+    # if existing_regular:
+    #     error_msg = (
+    #         f"Рядок {row_index}: Регулярне завдання вже існує для користувача {user.full_name} "
+    #         f"на місяць {task_month} з часом початку {start_time_str} та кінця {end_time_str}"
+    #     )
+    #     stats["errors"].append(error_msg)
+    #     if row_index not in problematic_rows:
+    #         problematic_rows[row_index] = {"row": row, "errors": []}
+    #     problematic_rows[row_index]["errors"].append(error_msg)
+    #     return
 
     # Create new regular task
     regular_task_data: Dict[str, Any] = {
