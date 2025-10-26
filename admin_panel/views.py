@@ -10,6 +10,7 @@ from bot.db.models.models import (
     TaskReportContent,
     TaskReport,
     TaskControlPoints,
+    RegularTask,
 )
 
 
@@ -41,4 +42,5 @@ model_views = [
     ModelView(TaskControlPoints, icon="fa fa-map-marker-alt"),
     ModelView(TaskReport, icon="fa fa-file-alt"),
     ModelView(TaskReportContent, icon="fa fa-file-text"),
+    ModelView(RegularTask, icon="fa fa-clock",),
 ]
