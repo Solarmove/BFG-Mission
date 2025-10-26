@@ -302,11 +302,6 @@ class TaskReport(Base):
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=True,
     )
-    regular_task_id: Mapped[int] = mapped_column(
-        INTEGER,
-        ForeignKey("regular_tasks.id", ondelete="CASCADE"),
-        nullable=True,
-    )
     task_control_point_id: Mapped[int] = mapped_column(
         INTEGER,
         ForeignKey("task_control_points.id", ondelete="CASCADE"),

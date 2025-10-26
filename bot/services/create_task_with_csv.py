@@ -135,7 +135,10 @@ def create_csv_tasks_template(users: Sequence[User], is_regular: bool) -> str:
 
     # Generate a unique filename
     current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    filename = f"regular_tasks_template_{current_date}.csv"
+    if is_regular:
+        filename = f"regular_tasks_template_{current_date}.csv"
+    else:
+        filename = f"simple_tasks_template_{current_date}.csv"
     file_path = excel_dir / filename
 
     # Save the file to disk
@@ -548,7 +551,11 @@ async def parse_tasks_csv(
 
         # Generate a unique filename with timestamp to avoid overwriting previous reports
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        filename = f"regular_tasks_errors_{current_date}.csv"
+        filename = (
+            f"simple_tasks_errors_{current_date}.csv"
+            if not is_regular
+            else f"regular_tasks_errors_{current_date}.csv"
+        )
         file_path = excel_dir / filename
 
         # Save the file to disk
