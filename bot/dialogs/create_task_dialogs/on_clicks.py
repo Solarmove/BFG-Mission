@@ -18,7 +18,7 @@ from ...db.models.models import WorkSchedule
 from ...exceptions.user_exceptions import InvalidCSVFile
 from ...keyboards.ai import exit_ai_agent_kb
 from ...services.ai_agent.tools import TaskTools
-from ...services.create_task_with_csv import parse_regular_tasks_csv
+from ...services.create_task_with_csv import parse_tasks_csv
 from ...states.ai import AIAgentMenu
 from ...utils.unitofwork import UnitOfWork
 
@@ -642,7 +642,7 @@ async def on_send_csv_file_click(
         user_id=message.from_user.id,
     )
     try:
-        result = await parse_regular_tasks_csv(path_to_file, uow, task_tools)
+        result = await parse_tasks_csv(path_to_file, uow, task_tools)
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")
@@ -665,7 +665,7 @@ async def on_recheck_csv_file_click(
         user_id=message.from_user.id,
     )
     try:
-        result = await parse_regular_tasks_csv(path_to_file, uow, task_tools)
+        result = await parse_tasks_csv(path_to_file, uow, task_tools)
         manager.dialog_data["parsing_csv_result"] = result
     except InvalidCSVFile as e:
         await message.answer(f"Помилка в CSV файлі: \n\n<blockquote>{e}</blockquote>")

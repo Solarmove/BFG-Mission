@@ -13,6 +13,7 @@ from bot.db.repositories.repo import (
     WorkScheduleRepo,
     PositionRepo,
     HierarchyLevelRepo,
+    RegularTaskRepo,
 )
 
 
@@ -47,6 +48,7 @@ class UnitOfWork(IUnitOfWork):
         self.task_categories = TaskCategoryRepo(self.session)
         self.tasks = TaskRepo(self.session)
         self.task_control_points = TaskControlPointsRepo(self.session)
+        self.regular_tasks = RegularTaskRepo(self.session)
         self.task_reports = TaskReportRepo(self.session)
         self.task_report_contents = TaskReportContentRepo(self.session)
         self.positions = PositionRepo(self.session)

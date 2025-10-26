@@ -11,7 +11,7 @@ from arq import ArqRedis
 from bot.db.models.models import User as UserDB, TaskCategory, WorkSchedule
 from bot.entities.task import TaskCreate, TaskControlPointCreate
 from bot.services.ai_agent.tools import TaskTools
-from bot.services.create_task_with_csv import create_regular_tasks_template
+from bot.services.create_task_with_csv import create_csv_tasks_template
 from bot.utils.unitofwork import UnitOfWork
 
 
@@ -259,11 +259,14 @@ async def get_control_points(
 async def excel_file_getter(
     dialog_manager: DialogManager, uow: UnitOfWork, event_from_user: User, **kwargs
 ):
+    start_data = dialog_manager.start_data or {}
+    is_regular = start_data.get("is_regular", False)
     my_hierarchy_level = await uow.users.get_user_hierarchy_level(event_from_user.id)
     all_users_models: Sequence[UserDB] = await uow.users.get_users_without_me(
         event_from_user.id, my_hierarchy_level
     )
-    path_to_file = create_regular_tasks_template(all_users_models)
+    path_to_file = create_csv_tasks_template(all_users_models, is_regular=is_regular)
+    print(f"Path to file: {path_to_file}")
     media = MediaAttachment(
         type=ContentType.DOCUMENT,
         path=path_to_file,
@@ -291,5 +294,4 @@ async def get_pared_data(
         "errors": errors,
         "created_count": result.get("tasks_created"),
         "errors_count": len(errors),
-
     }

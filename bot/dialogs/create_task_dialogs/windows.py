@@ -289,7 +289,7 @@ send_regular_tasks_csv_file_window = Window(
         func=on_clicks.on_send_csv_file_click, content_types=[ContentType.DOCUMENT]
     ),
     Cancel(I18nFormat("back-btn")),
-    state=states.CreateRegularTasks.send_csv_file,
+    state=states.CreateManyTasks.send_csv_file,
     getter=getters.excel_file_getter,
 )
 
@@ -315,6 +315,6 @@ show_parse_regular_tasks_result_window = Window(
     ),
     Back(I18nFormat("back-btn")),
     Cancel(I18nFormat("back-to-main-menu-btn")),
-    state=states.CreateRegularTasks.show_result,
+    state=states.CreateManyTasks.show_result,
     getter=getters.get_pared_data,
 )

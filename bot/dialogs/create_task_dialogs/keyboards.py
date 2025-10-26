@@ -11,6 +11,7 @@ from aiogram_dialog.widgets.kbd import (
     PrevPage,
     CurrentPage,
     NextPage,
+    Column,
 )  # noqa: F401
 from aiogram_dialog.widgets.text import Format
 from magic_filter import F
@@ -29,16 +30,23 @@ def create_task_menu_kb():
             ),
             when=F["hierarchy_level"].in_([1, 2]),
         ),
-        Row(
+        Column(
             Start(
                 I18nFormat("create-one-task-btn"),
                 id="create_one_task_btn",
                 state=states.CreateSingleTask.enter_task_title,
             ),
             Start(
+                I18nFormat("create-many-tasks-btn"),
+                id="create_many_tasks_btn",
+                state=states.CreateManyTasks.send_csv_file,
+                data={"is_regular": False},
+            ),
+            Start(
                 I18nFormat("create-regular-tasks-btn"),
                 id="create_regular_tasks_btn",
-                state=states.CreateRegularTasks.send_csv_file,
+                state=states.CreateManyTasks.send_csv_file,
+                data={"is_regular": True},
             ),
         ),
     )

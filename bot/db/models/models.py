@@ -61,6 +61,16 @@ class User(Base):
         cascade="all, delete-orphan",
         foreign_keys="[Task.executor_id]",
     )
+    regular_created_tasks: Mapped[list["RegularTask"]] = Relationship(
+        back_populates="creator",
+        cascade="all, delete-orphan",
+        foreign_keys="[RegularTask.creator_id]",
+    )
+    regular_executed_tasks: Mapped[list["RegularTask"]] = Relationship(
+        back_populates="executor",
+        cascade="all, delete-orphan",
+        foreign_keys="[RegularTask.executor_id]",
+    )
 
     reports: Mapped[list["TaskReport"]] = Relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -152,6 +162,7 @@ class Task(Base):
         primary_key=True,
         autoincrement=True,
     )
+    # is_regular = mapped_column(BOOLEAN, default=True)
     creator_id: Mapped[int] = mapped_column(
         BIGINT,
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -205,6 +216,47 @@ class Task(Base):
     )
 
 
+class RegularTask(Base):
+    __tablename__ = "regular_tasks"
+
+    id = mapped_column(BIGINT, primary_key=True, autoincrement=True)
+    creator_id: Mapped[int] = mapped_column(
+        BIGINT,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    creator: Mapped["User"] = Relationship(
+        back_populates="regular_created_tasks",
+        foreign_keys="RegularTask.creator_id",
+    )
+    executor_id: Mapped[int] = mapped_column(
+        BIGINT,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    executor: Mapped["User"] = Relationship(
+        back_populates="regular_executed_tasks",
+        foreign_keys="RegularTask.executor_id",
+    )
+    category_id = mapped_column(
+        INTEGER,
+        ForeignKey("task_categories.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(VARCHAR(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(TEXT, nullable=True)
+    task_month = mapped_column(INTEGER, nullable=False)
+    start_time = mapped_column(TIME(timezone=True), nullable=False)
+    end_datetime = mapped_column(TIME(timezone=True), nullable=False)
+    photo_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
+    video_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
+    file_required: Mapped[bool] = mapped_column(BOOLEAN, default=False)
+    created_at: Mapped[str] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+    )
+
+
 class TaskControlPoints(Base):
     __tablename__ = "task_control_points"
 
@@ -247,7 +299,12 @@ class TaskReport(Base):
     task_id: Mapped[int] = mapped_column(
         INTEGER,
         ForeignKey("tasks.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+    )
+    regular_task_id: Mapped[int] = mapped_column(
+        INTEGER,
+        ForeignKey("regular_tasks.id", ondelete="CASCADE"),
+        nullable=True,
     )
     task_control_point_id: Mapped[int] = mapped_column(
         INTEGER,

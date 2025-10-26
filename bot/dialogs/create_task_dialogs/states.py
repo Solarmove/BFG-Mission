@@ -34,7 +34,7 @@ class AddControlPoint(StatesGroup):
     add_more = State()
 
 
-class CreateRegularTasks(StatesGroup):
+class CreateManyTasks(StatesGroup):
     """
     State for creating multiple tasks.
     """

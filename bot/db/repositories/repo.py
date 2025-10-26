@@ -14,6 +14,7 @@ from bot.db.models.models import (
     User,
     WorkSchedule,
     HierarchyLevel,
+    RegularTask,
 )
 from bot.db.redis import redis_cache
 from bot.entities.shared import TaskReadExtended
@@ -485,3 +486,6 @@ class AnalyticsRepo(SQLAlchemyRepository):
             TaskReadExtended.model_validate(task, from_attributes=True).model_dump()
             for task in result
         ]
+
+class RegularTaskRepo(SQLAlchemyRepository):
+    model = RegularTask

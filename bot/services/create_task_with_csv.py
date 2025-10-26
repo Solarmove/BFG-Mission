@@ -1,43 +1,108 @@
+import calendar
 import csv
 import datetime
 import logging
 import os
 from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, List, Optional
 
-from bot.db.models.models import TaskCategory, User, WorkSchedule
+from bot.db.models.models import User, WorkSchedule
 from bot.entities.task import TaskCreate
 from bot.exceptions.user_exceptions import InvalidCSVFile
 from bot.services.ai_agent.tools import TaskTools
 from bot.utils.unitofwork import UnitOfWork
 from configreader import KYIV
 
+SIMPLE_TASK_HEADERS = [
+    "Telegram ID",
+    "Ім'я + Посада",
+    "Назва завдання",
+    "Опис завдання",
+    "Дата завдання",
+    "Час початку (HH:MM)",
+    "Час кінця (HH:MM)",
+    "Категорія",
+    "Фото",
+    "Відео",
+    "Документ",
+]
 
-def create_regular_tasks_template(users: Sequence[User]) -> str:
+REGULAR_TASK_HEADERS = [
+    "Telegram ID",
+    "Ім'я + Посада",
+    "Назва завдання",
+    "Опис завдання",
+    "Номер Місяця завдання",
+    "Час початку (HH:MM)",
+    "Час кінця (HH:MM)",
+    "Категорія",
+    "Фото",
+    "Відео",
+    "Документ",
+]
+
+
+def get_row_data(user_id: int, full_name_and_position: str, is_regular: bool) -> list:
+    if not is_regular:
+        simple_task_row_data = [
+            user_id,
+            full_name_and_position,
+            (datetime.datetime.now(KYIV) + datetime.timedelta(days=1)).strftime(
+                "%Y-%m-%d"
+            ),
+            "",  # Task name (empty)
+            "",  # Task description (empty)
+            "",  # Start time (empty)
+            "",  # End time (empty)
+            "",  # Category (empty)\
+            "-",  # Photo (empty)
+            "-",  # Video (empty)
+            "-",  # Document (empty)
+        ]
+        return simple_task_row_data
+    else:
+        task_month = datetime.datetime.now(KYIV).month
+        current_day = datetime.datetime.now(KYIV).day
+        max_days_in_month = calendar.monthrange(
+            datetime.datetime.now(KYIV).year, task_month
+        )[-1]
+        if current_day == max_days_in_month:
+            next_month = task_month + 1
+            next_year = datetime.datetime.now(KYIV).year
+            if next_month > 12:
+                task_month = 1
+                next_year += 1
+
+        regular_task_row_data = [
+            user_id,
+            full_name_and_position,
+            "",  # Task name (empty)
+            "",  # Task description (empty)
+            task_month,  # Month
+            "",  # Start time (empty)
+            "",  # End time (empty)
+            "",  # Category (empty)\
+            "-",  # Photo (empty)
+            "-",  # Video (empty)
+            "-",  # Document (empty)
+        ]
+        return regular_task_row_data
+
+
+def create_csv_tasks_template(users: Sequence[User], is_regular: bool) -> str:
     """
     Create a CSV file (Excel compatible) with all users from the database as a template for regular tasks.
 
     Args:
         users: List of User objects from the database
+        is_regular: Whether the template is for regular tasks or for other tasks (e.g., for reminders)
 
     Returns:
         str: Path to the saved CSV file
     """
     # Create headers
-    headers = [
-        "Telegram ID",
-        "Ім'я + Посада",
-        "Дата завдання",
-        "Назва завдання",
-        "Опис завдання",
-        "Час початку (HH:MM)",
-        "Час кінця (HH:MM)",
-        "Категорія",
-        "Фото",
-        "Відео",
-        "Документ",
-    ]
+    headers = REGULAR_TASK_HEADERS if is_regular else SIMPLE_TASK_HEADERS
 
     # Create a string buffer for CSV data
     output = StringIO()
@@ -54,22 +119,7 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
         user_info = f"{full_name} - {position_title}"
 
         # Create an empty row for the user as a template
-        row_data = [
-            user.id,
-            user_info,
-            (datetime.datetime.now(KYIV) + datetime.timedelta(days=1)).strftime(
-                "%Y-%m-%d"
-            ),
-            "",  # Task name (empty)
-            "",  # Task description (empty)
-            "",  # Start time (empty)
-            "",  # End time (empty)
-            "",  # Category (empty)\
-            "-",  # Photo (empty)
-            "-",  # Video (empty)
-            "-",  # Document (empty)
-        ]
-
+        row_data = get_row_data(user.id, user_info, is_regular)
         # Write the row
         writer.writerow(row_data)
 
@@ -94,8 +144,8 @@ def create_regular_tasks_template(users: Sequence[User]) -> str:
     return str(file_path.absolute())
 
 
-async def parse_regular_tasks_csv(
-    file_path: str, uow: UnitOfWork, task_tools: TaskTools
+async def parse_tasks_csv(
+    file_path: str, uow: UnitOfWork, task_tools: TaskTools, is_regular: bool = True
 ) -> Dict[str, Any]:
     """
     Parse a CSV file with regular tasks and add them to the database.
@@ -151,8 +201,9 @@ async def parse_regular_tasks_csv(
 
     # Parse headers
     headers = rows[0]
+    headers_count_required = 11
     print(f"Parsed headers: {headers}")
-    if len(headers) < 11:  # All required columns
+    if len(headers) < headers_count_required:  # All required columns
         # raise InvalidCSVFile(
         #     "Заголовки написані не коректно. Перевірте формат файлу CSV."
         # )
@@ -170,16 +221,7 @@ async def parse_regular_tasks_csv(
                 )
 
     # Validate required headers
-    expected_headers = [
-        "Telegram ID",
-        "Ім'я + Посада",
-        "Дата завдання",
-        "Назва завдання",
-        "Опис завдання",
-        "Час початку (HH:MM)",
-        "Час кінця (HH:MM)",
-        "Категорія",
-    ]
+    expected_headers = SIMPLE_TASK_HEADERS if not is_regular else REGULAR_TASK_HEADERS
 
     for i, header in enumerate(expected_headers):
         if headers[i] != header:
@@ -198,13 +240,17 @@ async def parse_regular_tasks_csv(
                 problematic_rows[row_index] = {"row": row, "errors": []}
             problematic_rows[row_index]["errors"].append(error_msg)
             continue
-
+        month_str = None
+        task_date_str = None
         # Extract data from row
         try:
             telegram_id = int(row[0])
-            task_date_str = row[2].strip()
-            task_name = row[3].strip()
-            task_description = row[4].strip()
+            task_name = row[2].strip()
+            task_description = row[3].strip()
+            if is_regular:
+                month_str = row[4].strip()
+            else:
+                task_date_str = row[4].strip()
             start_time_str = row[5].strip()
             end_time_str = row[6].strip()
             category_name = row[7].strip()
@@ -220,14 +266,20 @@ async def parse_regular_tasks_csv(
                 problematic_rows[row_index] = {"row": row, "errors": []}
             problematic_rows[row_index]["errors"].append(error_msg)
             continue
-        if not task_date_str:
+        if not is_regular and not task_date_str:
             error_msg = f"Рядок {row_index}: Дата завдання не може бути порожньою"
             stats["errors"].append(error_msg)
             if row_index not in problematic_rows:
                 problematic_rows[row_index] = {"row": row, "errors": []}
             problematic_rows[row_index]["errors"].append(error_msg)
             continue
-
+        if is_regular and not month_str:
+            error_msg = f"Рядок {row_index}: Місяць не може бути порожнім"
+            stats["errors"].append(error_msg)
+            if row_index not in problematic_rows:
+                problematic_rows[row_index] = {"row": row, "errors": []}
+            problematic_rows[row_index]["errors"].append(error_msg)
+            continue
         # Validate required fields
         if not task_name:
             error_msg = f"Рядок {row_index}: Назва завдання не може бути порожньою"
@@ -246,22 +298,23 @@ async def parse_regular_tasks_csv(
             continue
 
         # Parse time values
-        try:
-            task_date = datetime.datetime.strptime(task_date_str, "%Y-%m-%d").date()
-            if task_date < datetime.date.today():
-                error_msg = f"Рядок {row_index}: Дата завдання ({task_date_str}) не може бути в минулому"
+        if not is_regular:
+            try:
+                task_date = datetime.datetime.strptime(task_date_str, "%Y-%m-%d").date()
+                if task_date < datetime.date.today():
+                    error_msg = f"Рядок {row_index}: Дата завдання ({task_date_str}) не може бути в минулому"
+                    stats["errors"].append(error_msg)
+                    if row_index not in problematic_rows:
+                        problematic_rows[row_index] = {"row": row, "errors": []}
+                    problematic_rows[row_index]["errors"].append(error_msg)
+                    continue
+            except ValueError:
+                error_msg = f"Рядок {row_index}: Неправильний формат дати. Використовуйте формат YYYY-MM-DD"
                 stats["errors"].append(error_msg)
                 if row_index not in problematic_rows:
                     problematic_rows[row_index] = {"row": row, "errors": []}
                 problematic_rows[row_index]["errors"].append(error_msg)
                 continue
-        except ValueError:
-            error_msg = f"Рядок {row_index}: Неправильний формат дати. Використовуйте формат YYYY-MM-DD"
-            stats["errors"].append(error_msg)
-            if row_index not in problematic_rows:
-                problematic_rows[row_index] = {"row": row, "errors": []}
-            problematic_rows[row_index]["errors"].append(error_msg)
-            continue
         try:
             start_time = (
                 datetime.datetime.strptime(start_time_str, "%H:%M")
@@ -301,26 +354,59 @@ async def parse_regular_tasks_csv(
             continue
 
         # Find or create category if provided
-        category_id = None
+        category_id: Optional[int] = None
         if category_name:
             category = await uow.task_categories.find_one(name=category_name)
             if not category:
-                # Create new category
-                category = TaskCategory(name=category_name)
-                uow.session.add(category)
-                # await uow.commit()
-                category_id = category.id
+                # Create new category and get its id
+                category_id = await uow.task_categories.add_one({"name": category_name})
             else:
                 category_id = category.id
+        if not is_regular:
+            # Get all work schedules for the user in the future
+            future_work_schedules: Sequence[
+                WorkSchedule
+            ] = await uow.work_schedules.get_all_work_schedule_in_user(
+                user_id=user.id,
+                from_date=task_date,
+                to_date=task_date,
+            )
+        else:
+            # Process regular task creation: month-based without specific date
+            try:
+                task_month = int(month_str)
+                if task_month < 1 or task_month > 12:
+                    raise ValueError
+            except Exception:
+                error_msg = f"Рядок {row_index}: Неправильний місяць '{month_str}'. Вкажіть число від 1 до 12"
+                stats["errors"].append(error_msg)
+                if row_index not in problematic_rows:
+                    problematic_rows[row_index] = {"row": row, "errors": []}
+                problematic_rows[row_index]["errors"].append(error_msg)
+                continue
 
-        # Get all work schedules for the user in the future
-        future_work_schedules: Sequence[
-            WorkSchedule
-        ] = await uow.work_schedules.get_all_work_schedule_in_user(
-            user_id=user.id,
-            from_date=task_date,
-            to_date=task_date,
-        )
+            await _create_regular_task(
+                uow=uow,
+                task_tools=task_tools,
+                user=user,
+                task_name=task_name,
+                task_description=task_description,
+                task_month=task_month,
+                start_time=start_time,
+                end_time=end_time,
+                category_id=category_id,
+                photo=photo,
+                video=video,
+                document=document,
+                start_time_str=start_time_str,
+                end_time_str=end_time_str,
+                row_index=row_index,
+                row=row,
+                problematic_rows=problematic_rows,
+                stats=stats,
+            )
+            # For regular tasks, continue to next row
+            continue
 
         if not future_work_schedules:
             error_msg = f"Рядок {row_index}: Користувач з Telegram ID {telegram_id} не має робочих днів у майбутньому"
@@ -474,3 +560,68 @@ async def parse_regular_tasks_csv(
 
     logging.info(f"Regular tasks creation stats: {stats}")
     return stats
+
+
+async def _create_regular_task(
+    uow: UnitOfWork,
+    task_tools: TaskTools,
+    user: User,
+    task_name: str,
+    task_description: str,
+    task_month: int,
+    start_time: datetime.time,
+    end_time: datetime.time,
+    category_id: Optional[int],
+    photo: bool,
+    video: bool,
+    document: bool,
+    start_time_str: str,
+    end_time_str: str,
+    row_index: int,
+    row: List[str],
+    problematic_rows: Dict[int, Dict[str, Any]],
+    stats: Dict[str, Any],
+) -> None:
+    """Create a regular (monthly) task for a user or record an error if duplicate exists.
+
+    This writes results directly into stats and problematic_rows to minimize changes in the caller.
+    """
+    # Check duplicate regular task
+    existing_regular = await uow.regular_tasks.find_one(
+        executor_id=user.id,
+        title=task_name,
+        description=task_description,
+        category_id=category_id,
+        task_month=task_month,
+        start_time=start_time,
+        end_datetime=end_time,
+    )
+    if existing_regular:
+        error_msg = (
+            f"Рядок {row_index}: Регулярне завдання вже існує для користувача {user.full_name} "
+            f"на місяць {task_month} з часом початку {start_time_str} та кінця {end_time_str}"
+        )
+        stats["errors"].append(error_msg)
+        if row_index not in problematic_rows:
+            problematic_rows[row_index] = {"row": row, "errors": []}
+        problematic_rows[row_index]["errors"].append(error_msg)
+        return
+
+    # Create new regular task
+    regular_task_data: Dict[str, Any] = {
+        "creator_id": task_tools.user_id,
+        "executor_id": user.id,
+        "title": task_name,
+        "description": task_description,
+        "task_month": task_month,
+        "start_time": start_time,
+        "end_datetime": end_time,
+        "category_id": category_id,
+        "photo_required": photo,
+        "video_required": video,
+        "file_required": document,
+    }
+    regular_task_id = await uow.regular_tasks.add_one(regular_task_data)
+    stats["tasks_created"] += 1
+    stats["created_tasks_ids"].append(regular_task_id)
+

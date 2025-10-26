@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Sequence
 
-import backoff
+# import backoff
 import langchain
 import openai
 from langchain.agents import (
@@ -119,7 +119,7 @@ class AIAgent:
         )
         return result_text
 
-    @backoff.on_exception(backoff.expo, openai.RateLimitError)
+    # @backoff.on_exception(backoff.expo, openai.RateLimitError)
     async def stream_response(self, content: str):
         config = RunnableConfig(
             configurable={"session_id": str(self.chat_id or "default")}
