@@ -437,6 +437,7 @@ async def parse_tasks_csv(
                 task_name=task_name,
                 task_description=task_description,
                 task_month=task_month,
+                task_year=int(year_str),
                 start_time=start_time,
                 end_time=end_time,
                 category_id=category_id,
@@ -611,6 +612,20 @@ async def parse_tasks_csv(
     return stats
 
 
+def timetz_with_fixed_offset(
+    local_t: dt.time, year: int, month: int, tz_key="Europe/Kyiv"
+) -> dt.time:
+    # «Приклеиваем» дату, чтобы учесть DST и получить смещение
+    probe = dt.datetime(
+        year, month, 1, local_t.hour, local_t.minute, tzinfo=ZoneInfo(tz_key)
+    )
+    offset = probe.utcoffset()
+    if offset is None:
+        # на всякий случай, но для ZoneInfo с датой offset будет не None
+        raise ValueError("Cannot compute timezone offset")
+    return local_t.replace(tzinfo=dt.timezone(offset))
+
+
 async def _create_regular_task(
     uow: UnitOfWork,
     task_tools: TaskTools,
@@ -618,6 +633,7 @@ async def _create_regular_task(
     task_name: str,
     task_description: str,
     task_month: int,
+    task_year: int,
     start_time: datetime.time,
     end_time: datetime.time,
     category_id: Optional[int],
@@ -655,7 +671,8 @@ async def _create_regular_task(
     #         problematic_rows[row_index] = {"row": row, "errors": []}
     #     problematic_rows[row_index]["errors"].append(error_msg)
     #     return
-
+    start_time_aw = timetz_with_fixed_offset(start_time, task_year, task_month)
+    end_time_aw = timetz_with_fixed_offset(end_time, task_year, task_month)
     # Create new regular task
     regular_task_data: Dict[str, Any] = {
         "creator_id": task_tools.user_id,
@@ -663,8 +680,9 @@ async def _create_regular_task(
         "title": task_name,
         "description": task_description,
         "task_month": task_month,
-        "start_time": start_time.replace(tzinfo=KYIV),
-        "end_time": end_time.replace(tzinfo=KYIV),
+        "task_year": task_year,
+        "start_time": start_time_aw,
+        "end_time": end_time_aw,
         "category_id": category_id,
         "photo_required": photo,
         "video_required": video,
