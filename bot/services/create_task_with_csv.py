@@ -50,11 +50,11 @@ def get_row_data(user_id: int, full_name_and_position: str, is_regular: bool) ->
         simple_task_row_data = [
             user_id,
             full_name_and_position,
+            "",  # Task name (empty)
+            "",  # Task description (empty)
             (datetime.datetime.now(KYIV) + datetime.timedelta(days=1)).strftime(
                 "%Y-%m-%d"
             ),
-            "",  # Task name (empty)
-            "",  # Task description (empty)
             "",  # Start time (empty)
             "",  # End time (empty)
             "",  # Category (empty)\
