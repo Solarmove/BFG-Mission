@@ -133,9 +133,9 @@ async def create_task_from_regular(ctx):
                 start_datetime=task_start_date,
                 end_datetime=task_end_date,
                 category_id=task.category_id,
-                photo_required=task.photo,
-                video_required=task.video,
-                file_required=task.document,
+                photo_required=task.photo_required,
+                video_required=task.video_required,
+                file_required=task.file_required,
             )
 
             # Add task to database
