@@ -109,10 +109,8 @@ async def create_task_from_regular(ctx):
         )
         now = datetime.datetime.now(KYIV)
         for task in all_regulars_tasks:
-            task_start_date = datetime.datetime.combine(
-                now.date(), task.start_time.time()
-            )
-            task_end_date = datetime.datetime.combine(now.date(), task.end_time.time())
+            task_start_date = datetime.datetime.combine(now.date(), task.start_time)
+            task_end_date = datetime.datetime.combine(now.date(), task.end_time)
             is_user_work = await uow.work_schedules.is_user_work_in_this_time(
                 user_id=task.executor_id,
                 date=task_start_date.date(),
