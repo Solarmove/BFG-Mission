@@ -144,7 +144,7 @@ async def create_task_from_regular(ctx):
                 arq=ctx["redis"],
                 user_id=task.executor_id,
             )
-            task_id =  uow.tasks.session.add(task_create)
+            task_id = uow.tasks.session.add(task_create)
             await uow.session.flush()
             await task_tools.create_notification_task_started(
                 task_id,
