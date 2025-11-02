@@ -187,6 +187,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
     headers = rows[0]
 
     # Validate required headers
+    print(headers)
     if (
         headers[0] != "ПІБ"
         or headers[1] != "Telegram ID"
