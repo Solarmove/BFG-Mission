@@ -164,7 +164,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                     if trial_rows:  # At least headers exist
                         rows = trial_rows
                         temp_headers = rows[0]
-                        print(temp_headers)
+                        logging.info(temp_headers)
                         if (
                             temp_headers[0] != "ПІБ"
                             or temp_headers[1] != "Telegram ID"
@@ -332,5 +332,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
 
         # Commit all changes
         await uow.commit()
-    pprint(stats)
+    logging.info(f"Finished processing CSV file {file_path}")
+    logging.info(f"Statistics: {stats}")
+
     return stats
