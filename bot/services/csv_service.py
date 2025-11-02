@@ -8,7 +8,7 @@ import re
 from io import StringIO
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from bot.db.models.models import User, WorkSchedule
 from bot.exceptions.user_exceptions import InvalidCSVFile
@@ -142,18 +142,49 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
             raise InvalidCSVFile(
                 "Не вдалося прочитати файл CSV. Переконайтеся, що файл у форматі CSV."
             )
+    rows: list[list[str]] | None = None
+    chosen_encoding: Optional[str] = None
+    chosen_delimiter: Optional[str] = None
+
+    encodings_to_try = [
+        "utf-8-sig",
+        "utf-8",
+        "cp1251",
+        "windows-1251",
+        "cp1252",
+        "latin1",
+    ]
+    delimiters_to_try = [";", ","]
+
+    for enc in encodings_to_try:
+        for delim in delimiters_to_try:
+            try:
+                with open(file_path, "r", encoding=enc, newline="") as f:
+                    reader = csv.reader(f, delimiter=delim)
+                    trial_rows = list(reader)
+                    if trial_rows:  # At least headers exist
+                        rows = trial_rows
+                        chosen_encoding = enc
+                        chosen_delimiter = delim
+                        break
+            except UnicodeDecodeError:
+                # Try next encoding
+                continue
+        if rows is not None:
+            break
+
+    if rows is None:
+        raise InvalidCSVFile(
+            "Не вдалося прочитати CSV файл. Будь ласка, переконайтесь, що файл збережено в UTF-8 або Windows-1251."
+        )
 
     if len(rows) < 2:  # At least headers and one data row
         raise InvalidCSVFile(
-            "Файл порожній. Використовуйте шаблон CSV для створення/оновлення графіків роботи"
+            "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
         )
 
     # Parse headers
     headers = rows[0]
-    if len(headers) < 5:  # ФИО, Telegram ID, Должность, Месяц, at least one day
-        raise InvalidCSVFile(
-            "Заголовки написані не коректно. Перевірте формат файлу CSV."
-        )
 
     # Validate required headers
     if (
@@ -250,7 +281,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
             if schedule_text.lower() == "вихідний":
                 if day in existing_by_day:
                     # Delete existing schedule for this day
-                    logging.info()
+                    logging.info(f"Deleting schedule for day {day} for user {user.id}")
                     existing_scheduler_model = existing_by_day[day]
                     await uow.work_schedules.delete_one(existing_scheduler_model.id)
                     await uow.commit()
