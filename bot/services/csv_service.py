@@ -74,7 +74,6 @@ def create_work_schedule_csv(user_data: List[User], month: int, year: int) -> st
             row_data.append(schedule_text)
 
         # Write the row
-        pprint(row_data)
         writer.writerow(row_data)
 
     # Convert to bytes
