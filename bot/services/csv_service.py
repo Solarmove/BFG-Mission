@@ -145,7 +145,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
     rows: list[list[str]] | None = None
     chosen_encoding: Optional[str] = None
     chosen_delimiter: Optional[str] = None
-
+    headers: list[str] = []
     encodings_to_try = [
         "utf-8-sig",
         "utf-8",
@@ -164,8 +164,21 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                     trial_rows = list(reader)
                     if trial_rows:  # At least headers exist
                         rows = trial_rows
+                        temp_headers = rows[0]
+                        print(temp_headers)
+                        if (
+                            temp_headers[0] != "ПІБ"
+                            or temp_headers[1] != "Telegram ID"
+                            or temp_headers[2] != "Посада"
+                            or temp_headers[3] != "Місяць"
+                        ):
+                            logging.info(
+                                f"Headers do not match with encoding {enc} and delimiter {delim}. Trying next."
+                            )
+                            continue
                         chosen_encoding = enc
                         chosen_delimiter = delim
+                        headers = temp_headers
                         break
             except UnicodeDecodeError:
                 # Try next encoding
@@ -182,20 +195,9 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         raise InvalidCSVFile(
             "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
         )
-
-    # Parse headers
-    headers = rows[0]
-
-    # Validate required headers
-    print(headers)
-    if (
-        headers[0] != "ПІБ"
-        or headers[1] != "Telegram ID"
-        or headers[2] != "Посада"
-        or headers[3] != "Місяць"
-    ):
+    if headers is None or len(headers) < 5:
         raise InvalidCSVFile(
-            "Заголовки розміщені не правильно. Перевірте формат файлу CSV."
+            "Недостатньо стовпців у файлі CSV. Використовуйте шаблон CSV для створення регулярних завдань"
         )
 
     # Extract days from headers (starting from index 4)
