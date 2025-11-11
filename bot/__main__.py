@@ -58,13 +58,11 @@ i18n_middleware = RedisI18nMiddleware(core=core, redis=redis)
 i18n_dialog_middleware = make_i18n_middleware(config.path_to_locales)
 
 llm = ChatOpenAI(
-    # model="gpt-3.5-turbo",
-    # model="gpt-4.1-2025-04-14",
-    model="gpt-4o",
+    # model_name="gpt-3.5-turbo",
+    # model_name="gpt-4.1-2025-04-14",
+    model_name="gpt-4o",
     temperature=0.0,
-    max_tokens=500,
-    max_completion_tokens=1000,
-    api_key=config.openai_api_key,
+    max_tokens=1000,
     max_retries=15,
     streaming=False,
     top_p=0.3,

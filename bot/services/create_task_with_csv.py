@@ -182,6 +182,7 @@ async def parse_tasks_csv(
     # Check if file exists
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File {file_path} not found")
+    headers_count_required = 11 if not is_regular else 12
 
     # Statistics to return
     stats = {
@@ -211,19 +212,31 @@ async def parse_tasks_csv(
     delimiters_to_try = [";", ","]
 
     for enc in encodings_to_try:
-        for delim in delimiters_to_try:
-            try:
+        try:
+            for delim in delimiters_to_try:
                 with open(file_path, "r", encoding=enc, newline="") as f:
                     reader = csv.reader(f, delimiter=delim)
-                    trial_rows = list(reader)
-                    if trial_rows:  # At least headers exist
-                        rows = trial_rows
-                        chosen_encoding = enc
-                        chosen_delimiter = delim
-                        break
-            except UnicodeDecodeError:
-                # Try next encoding
-                continue
+                    rows = list(reader)
+                    if not rows:
+                        continue  # At least headers exist
+                    headers = rows[0]
+                    logging.info(
+                        f"Parsed headers (encoding={chosen_encoding},"
+                        f" delimiter='{chosen_delimiter}'): {headers}"
+                    )
+                    if len(headers) < headers_count_required:
+                        logging.info(
+                            f"Headers count ({len(headers)}) is less"
+                            f" than required ({headers_count_required}). "
+                            f"Skipping rows with missing headers."
+                        )
+                        continue
+                    chosen_encoding = enc
+                    chosen_delimiter = delim
+                    break
+
+        except UnicodeDecodeError:
+            continue
         if rows is not None:
             break
 
@@ -235,20 +248,6 @@ async def parse_tasks_csv(
     if len(rows) < 2:  # At least headers and one data row
         raise InvalidCSVFile(
             "Файл порожній. Використовуйте шаблон CSV для створення регулярних завдань"
-        )
-
-    # Parse headers
-    headers = rows[0]
-    headers_count_required = 11 if not is_regular else 12
-    logging.info(
-        f"Parsed headers (encoding={chosen_encoding}, delimiter='{chosen_delimiter}'): {headers}"
-    )
-    if len(headers) < headers_count_required:  # All required columns
-        logging.info(
-            f"Headers count ({len(headers)}) is less than required ({headers_count_required}). Skipping rows with missing headers."
-        )
-        raise InvalidCSVFile(
-            "Заголовки написані не коректно. Перевірте формат файлу CSV."
         )
 
     # Validate required headers
