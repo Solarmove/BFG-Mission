@@ -262,7 +262,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
 
             # Skip if it's a day off
             if schedule_text.lower() == "вихідний":
-                if day in existing_by_day:
+                if day in existing_by_day.keys():
                     # Delete existing schedule for this day
                     logging.info(f"Deleting schedule for day {day} for user {user.id}")
                     existing_scheduler_model = existing_by_day[day]
@@ -290,7 +290,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
             date = datetime.datetime(year, month, day)
 
             # Check if schedule already exists for this day
-            if day in existing_by_day:
+            if day in existing_by_day.keys():
                 existing = existing_by_day[day]
                 # Update if different
                 if existing.start_time != start_time or existing.end_time != end_time:

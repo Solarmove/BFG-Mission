@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from sqlalchemy import func, select, and_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 
 from bot.db.models.models import (
     Positions,
@@ -133,12 +133,15 @@ class UserRepo(SQLAlchemyRepository):
         return res.scalar_one_or_none()
 
     async def get_all_users_with_schedule(
-        self,
+        self, date_from: datetime.date, date_to: datetime.date
     ):
         stmt = select(self.model).options(
             selectinload(self.model.work_schedules),
             joinedload(self.model.position).options(
                 joinedload(Positions.hierarchy_level)
+            ),
+            with_loader_criteria(
+                WorkSchedule, and_(WorkSchedule.date.between(date_from, date_to))
             ),
         )
         res = await self.session.execute(stmt)

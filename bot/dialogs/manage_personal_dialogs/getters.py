@@ -74,10 +74,15 @@ async def excel_file_getter(
 ):
     current_month = dialog_manager.dialog_data["month"]
     current_year = dialog_manager.dialog_data["year"]
-    users_list = await uow.users.get_all_users_with_schedule()
-    print(users_list)
+    date_from = datetime.datetime(year=current_year, month=current_month, day=1)
+    days_in_month = calendar.monthrange(current_year, current_month)[1]
+    date_to = datetime.datetime(
+        year=current_year, month=current_month, day=days_in_month
+    )
+
+    users = await uow.users.get_all_users_with_schedule(date_from, date_to)
     template_csv_file_path = create_work_schedule_csv(
-        users_list, month=current_month, year=current_year
+        users, month=current_month, year=current_year
     )
     dialog_manager.dialog_data["path_to_csv_file"] = template_csv_file_path
     return {
@@ -104,7 +109,11 @@ async def work_schedule_getter(
 ):
     month = dialog_manager.dialog_data["month"]
     year = dialog_manager.dialog_data["year"]
-    users = await uow.users.get_all_users_with_schedule()
+    date_from = datetime.datetime(year=year, month=month, day=1)
+    days_in_month = calendar.monthrange(year, month)[1]
+    date_to = datetime.datetime(year=year, month=month, day=days_in_month)
+
+    users = await uow.users.get_all_users_with_schedule(date_from, date_to)
     path_to_csv_file = create_work_schedule_csv(users, month=month, year=year)
 
     month_name = calendar.month_name[month].capitalize()
