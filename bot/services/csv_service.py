@@ -205,6 +205,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
     # Process data rows
 
     for row in rows[1:]:  # Skip headers
+        logging.info(f"Processing row {row}")
         if len(row) < 3:
             stats["errors"].append(f"Рядок має недостатньо інформації: {row}")
             continue
