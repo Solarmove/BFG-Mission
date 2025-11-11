@@ -304,6 +304,10 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                         },
                     )
                     stats["schedules_updated"] += 1
+                else:
+                    logging.info(
+                        f"1 Schedule for day {day} for user {user.id} is already up-to-date."
+                    )
             else:
                 # Create new schedule
                 new_schedule = WorkSchedule(
@@ -317,6 +321,10 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
             if day not in processed_days:
                 await uow.work_schedules.delete_one(schedule.id)
                 stats["schedules_deleted"] += 1
+            else:
+                logging.info(
+                    f"2 Schedule for day {day} for user {user.id} is already up-to-date."
+                )
 
         # Commit all changes
         await uow.commit()
