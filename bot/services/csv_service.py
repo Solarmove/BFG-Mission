@@ -7,8 +7,7 @@ import os
 import re
 from io import StringIO
 from pathlib import Path
-from pprint import pprint
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from bot.db.models.models import User, WorkSchedule
 from bot.exceptions.user_exceptions import InvalidCSVFile
@@ -124,26 +123,8 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         "schedules_deleted": 0,
         "errors": [],
     }
-
-    # Read the CSV file
-    try:
-        with open(file_path, "r", encoding="utf-8-sig") as f:
-            reader = csv.reader(f, delimiter=";")
-            rows = list(reader)
-    except UnicodeDecodeError as e:
-        logging.info(f"UnicodeDecodeError: {e}. Trying cp1251 encoding.")
-        try:
-            with open(file_path, "r", encoding="cp1251") as f:
-                reader = csv.reader(f, delimiter=";")
-                rows = list(reader)
-        except Exception as e:
-            logging.error(f"Error reading CSV file with cp1251 encoding: {e}")
-            raise InvalidCSVFile(
-                "Не вдалося прочитати файл CSV. Переконайтеся, що файл у форматі CSV."
-            )
     rows: list[list[str]] | None = None
-    chosen_encoding: Optional[str] = None
-    chosen_delimiter: Optional[str] = None
+
     headers: list[str] = []
     encodings_to_try = [
         "utf-8-sig",
@@ -175,8 +156,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                                 f"Headers do not match with encoding {enc} and delimiter {delim}. Trying next."
                             )
                             continue
-                        chosen_encoding = enc
-                        chosen_delimiter = delim
+
                         headers = temp_headers
                         break
             except UnicodeDecodeError:
@@ -313,8 +293,15 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
                 existing = existing_by_day[day]
                 # Update if different
                 if existing.start_time != start_time or existing.end_time != end_time:
-                    existing.start_time = start_time
-                    existing.end_time = end_time
+                    # existing.start_time = start_time
+                    # existing.end_time = end_time
+                    await uow.work_schedules.edit_one(
+                        id=existing.id,
+                        data={
+                            "start_time": start_time,
+                            "end_time": end_time,
+                        },
+                    )
                     stats["schedules_updated"] += 1
             else:
                 # Create new schedule
@@ -327,7 +314,7 @@ async def parse_work_schedule_csv(file_path: str, uow: UnitOfWork) -> Dict[str, 
         # Delete schedules for days not in the CSV
         for day, schedule in existing_by_day.items():
             if day not in processed_days:
-                await uow.session.delete(schedule)
+                await uow.work_schedules.delete_one(schedule.id)
                 stats["schedules_deleted"] += 1
 
         # Commit all changes
