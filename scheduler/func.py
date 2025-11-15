@@ -3,7 +3,6 @@ import logging
 
 from aiogram import Bot
 
-from bot.db.models.models import Task
 from bot.entities.shared import TaskReadExtended
 from bot.services.ai_agent.tools import TaskTools
 from bot.utils.enum import TaskStatus
@@ -125,7 +124,7 @@ async def create_task_from_regular(ctx):
             task_end_date = datetime.datetime.combine(
                 task_end_date.date(), task_end_date.time()
             )
-            task_create = Task(
+            task_create = dict(
                 creator_id=task.creator_id,  # User creates their own regular task
                 executor_id=task.executor_id,
                 title=task.title,
@@ -137,6 +136,7 @@ async def create_task_from_regular(ctx):
                 video_required=task.video_required,
                 file_required=task.file_required,
             )
+            task_id = await uow.tasks.add_one(task_create)
 
             # Add task to database
             task_tools = TaskTools(
@@ -144,17 +144,18 @@ async def create_task_from_regular(ctx):
                 arq=ctx["redis"],
                 user_id=task.executor_id,
             )
-            task_id = uow.tasks.session.add(task_create)
+
             await uow.session.flush()
+            await uow.session.commit()
             await task_tools.create_notification_task_started(
                 task_id,
-                _defer_until=task_create.start_datetime,
+                _defer_until=task_start_date,
             )
             await task_tools.create_notification_task_is_overdue(
                 task_id,
-                _defer_until=task_create.end_datetime,
+                _defer_until=task_end_date,
             )
             await task_tools.create_notification_task_ending_soon(
                 task_id,
-                _defer_until=task_create.end_datetime - datetime.timedelta(minutes=30),
+                _defer_until=task_end_date - datetime.timedelta(minutes=30),
             )
